@@ -30,9 +30,19 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # With a custom domain the site lives at "/"; otherwise at "/<repo-name>/".
+      - name: Work out the base path
+        id: base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cname=$(gh api "repos/${{ github.repository }}/pages" --jq '.cname // empty' || true)
+          if [ -n "$cname" ]; then base=/; else base="/${{ github.event.repository.name }}/"; fi
+          echo "Custom domain: ${cname:-none}; base path: $base"
+          echo "path=$base" >> "$GITHUB_OUTPUT"
       - run: pnpm --filter @letter-race/web build
         env:
-          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_BASE: ${{ steps.base.outputs.path }}
           VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
