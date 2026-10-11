@@ -13,7 +13,7 @@ import {
   SUBMIT_GRACE_MS,
 } from './constants';
 import { pickLetter } from './letters';
-import { scoreRound } from './scoring';
+import { scoreRound, type Rejection } from './scoring';
 import type {
   Answers,
   CharacterId,
@@ -23,6 +23,7 @@ import type {
   RandomFn,
   Round,
   Settings,
+  Vote,
 } from './types';
 
 export type GameErrorCode =
@@ -37,7 +38,8 @@ export type GameErrorCode =
   | 'invalid_settings'
   | 'answers_incomplete'
   | 'already_submitted'
-  | 'not_participant';
+  | 'not_participant'
+  | 'invalid_vote';
 
 export class GameError extends Error {
   constructor(
@@ -60,7 +62,8 @@ export type Action =
   | { type: 'updateAnswers'; playerId: PlayerId; answers: Answers }
   | { type: 'submitAnswers'; playerId: PlayerId; answers: Answers }
   | { type: 'stopClock'; playerId: PlayerId; answers: Answers; now: number }
-  | { type: 'endGame'; playerId: PlayerId };
+  | { type: 'endGame'; playerId: PlayerId }
+  | { type: 'voteReject'; playerId: PlayerId; targetId: PlayerId; category: string };
 
 export interface NewPlayer {
   id: PlayerId;
@@ -183,6 +186,50 @@ function updatePlayer(state: GameState, playerId: PlayerId, patch: Partial<Playe
     ...state,
     players: state.players.map((p) => (p.id === playerId ? { ...p, ...patch } : p)),
   };
+}
+
+/**
+ * An answer is rejected when more than half of the other connected participants vote
+ * against it.
+ */
+export function rejectedAnswers(state: GameState): Rejection[] {
+  const round = state.round;
+  if (!round) return [];
+  const voters = round.participants.filter((id) => getPlayer(state, id)?.connected);
+  const tally = new Map<string, { rejection: Rejection; count: number }>();
+  for (const v of round.votes) {
+    if (!voters.includes(v.voterId)) continue;
+    const key = `${v.targetId}\u0000${v.category}`;
+    const entry = tally.get(key) ?? {
+      rejection: { playerId: v.targetId, category: v.category },
+      count: 0,
+    };
+    entry.count++;
+    tally.set(key, entry);
+  }
+  return [...tally.values()]
+    .filter(({ rejection, count }) => {
+      const eligible = voters.filter((id) => id !== rejection.playerId).length;
+      return count > eligible / 2;
+    })
+    .map(({ rejection }) => rejection);
+}
+
+/** Re-scores the finished round (after votes change) and fixes up totals. */
+function rescore(state: GameState): GameState {
+  const round = requireRound(state);
+  const old = round.result;
+  if (!old) return state;
+  const allAnswers: Record<PlayerId, Answers> = {};
+  for (const id of round.participants) allAnswers[id] = round.answers[id] ?? {};
+  const result = scoreRound(allAnswers, round.categories, round.letter, {
+    rejected: rejectedAnswers(state),
+  });
+  const totals = { ...state.totals };
+  for (const id of Object.keys(totals)) {
+    totals[id] += (result.roundTotals[id] ?? 0) - (old.roundTotals[id] ?? 0);
+  }
+  return { ...state, totals, round: { ...round, result } };
 }
 
 function finishRound(state: GameState): GameState {
@@ -312,6 +359,7 @@ export function reduce(state: GameState, action: Action): GameState {
         answers: {},
         submitted: [],
         result: null,
+        votes: [],
       };
       return {
         ...state,
@@ -393,6 +441,29 @@ export function reduce(state: GameState, action: Action): GameState {
           stoppedBy: endsAt < round.endsAt ? action.playerId : round.stoppedBy,
         },
       };
+    }
+
+    case 'voteReject': {
+      requirePlayer(state, action.playerId);
+      requirePhase(state, 'results');
+      const round = requireRound(state);
+      requireParticipant(round, action.playerId);
+      const score = round.result?.scores[action.targetId]?.[action.category];
+      if (action.targetId === action.playerId || !score || !(score.valid || score.rejected)) {
+        throw new GameError('invalid_vote', "You can't vote on that answer");
+      }
+      const isMine = (v: Vote) =>
+        v.voterId === action.playerId &&
+        v.targetId === action.targetId &&
+        v.category === action.category;
+      const already = round.votes.some(isMine);
+      const votes = already
+        ? round.votes.filter((v) => !isMine(v))
+        : [
+            ...round.votes,
+            { voterId: action.playerId, targetId: action.targetId, category: action.category },
+          ];
+      return rescore({ ...state, round: { ...round, votes } });
     }
 
     case 'endGame': {

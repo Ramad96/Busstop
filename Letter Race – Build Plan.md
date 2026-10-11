@@ -161,10 +161,10 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 
 ### Phase 7 — Polish (optional extras)
 
-- [ ] Sounds and haptics (tick in last 10 seconds)
-- [ ] Confetti for the winner
-- [ ] Vote to reject silly answers
-- [ ] Custom categories
+- [x] Sounds and haptics (tick in last 10 seconds)
+- [x] Confetti for the winner
+- [x] Vote to reject silly answers
+- [x] Custom categories
 
 **Done when:** it feels fun to play with friends.
 

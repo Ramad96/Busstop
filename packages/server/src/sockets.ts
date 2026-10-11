@@ -232,6 +232,18 @@ export function attachSocketHandlers(io: GameServer, rooms: RoomManager, now: ()
       handle((data: unknown) => dispatch({ type: 'stopClock', answers: answersFrom(data) })),
     );
 
+    socket.on(
+      'answer:vote',
+      handle((data: unknown) => {
+        if (!isObject(data)) throw new RoomError('bad_request', 'Bad request');
+        dispatch({
+          type: 'voteReject',
+          targetId: str(data.targetId),
+          category: str(data.category),
+        });
+      }),
+    );
+
     socket.on('disconnect', () => leaveCurrentRoom());
   });
 }

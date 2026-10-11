@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { standings, winners, type CategoryScore, type GameState } from '@letter-race/core';
 import { Avatar } from '../components/Avatar';
 import { ErrorText } from '../components/ErrorText';
+import { celebrate } from '../fx/confetti';
+import { sfx } from '../fx/sound';
 import { game } from '../net/socket';
 
 function scoreClass(score: CategoryScore): string {
@@ -34,6 +36,20 @@ export function Results({ state, you }: { state: GameState; you: string | null }
     .map((s) => s.playerId)
     .filter((id) => result.scores[id])
     .concat(Object.keys(result.scores).filter((id) => !playersById.has(id)));
+
+  const youLead = !!you && leaders.includes(you);
+  // Celebrate once per round (not again when votes change the scores).
+  useEffect(() => {
+    celebrate(youLead);
+    if (youLead) sfx.fanfare();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [round.number]);
+
+  const canVote = !!you && round.participants.includes(you);
+  const votesFor = (targetId: string, category: string) =>
+    round.votes
+      .filter((v) => v.targetId === targetId && v.category === category)
+      .map((v) => v.voterId);
 
   async function run(action: () => Promise<{ ok: boolean; error?: { message: string } }>) {
     setBusy(true);
@@ -89,6 +105,9 @@ export function Results({ state, you }: { state: GameState; you: string | null }
           <span className="pill shared">shared 5 / 3 / 2</span>
           <span className="pill invalid">0</span>
         </div>
+        {canVote && (
+          <p className="hint left">Silly answer? Tap 👎 – most players agreeing scores it 0.</p>
+        )}
         {result.categories.map((category) => (
           <div key={category} className="category-card">
             <h4>{category}</h4>
@@ -104,6 +123,13 @@ export function Results({ state, you }: { state: GameState; you: string | null }
                       <span className="answer-text">{score.answer || '—'}</span>
                       <span className="note">{scoreNote(score)}</span>
                     </span>
+                    {canVote && id !== you && (score.valid || score.rejected) && (
+                      <VoteButton
+                        count={votesFor(id, category).length}
+                        mine={votesFor(id, category).includes(you!)}
+                        onClick={() => run(() => game.voteReject(id, category))}
+                      />
+                    )}
                     <span className="points">{score.points}</span>
                   </li>
                 );
@@ -138,5 +164,27 @@ export function Results({ state, you }: { state: GameState; you: string | null }
         )}
       </div>
     </div>
+  );
+}
+
+function VoteButton({
+  count,
+  mine,
+  onClick,
+}: {
+  count: number;
+  mine: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`vote ${mine ? 'mine' : ''}`}
+      aria-pressed={mine}
+      aria-label={mine ? 'Take back reject vote' : 'Vote to reject'}
+      onClick={onClick}
+    >
+      👎{count > 0 && <span>{count}</span>}
+    </button>
   );
 }

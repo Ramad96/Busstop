@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { normaliseRoomCode } from '@letter-race/core';
+import { setMuted, useMuted } from './fx/sound';
 import { useGame } from './net/socket';
 import { Home } from './screens/Home';
 import { JoinCode } from './screens/JoinCode';
@@ -23,6 +24,7 @@ function initialView(): View {
 export function App() {
   const { status, game: state, you, rejoining } = useGame();
   const [view, setView] = useState<View>(initialView);
+  const muted = useMuted();
 
   let content;
   if (state) {
@@ -71,6 +73,13 @@ export function App() {
         </div>
       )}
       {content}
+      <button
+        className="mute-toggle"
+        onClick={() => setMuted(!muted)}
+        aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
+      >
+        {muted ? '🔇' : '🔊'}
+      </button>
     </div>
   );
 }

@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { allowedLetters, REVEAL_MS, type Settings } from '@letter-race/core';
+import { sfx } from '../fx/sound';
 import { useServerNow } from '../hooks';
 
 /**
@@ -21,6 +23,10 @@ export function LetterReveal({
   // Shuffle through letters, slowing down, then land on the real one.
   const step = Math.floor(Math.pow(elapsed / 40, 0.8));
   const shown = landed ? letter : pool[(step * 7) % pool.length];
+
+  useEffect(() => {
+    if (landed) sfx.ding();
+  }, [landed]);
 
   return (
     <div className="screen center reveal">

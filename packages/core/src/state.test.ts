@@ -371,3 +371,62 @@ describe('purity', () => {
     expect(before).toEqual(snapshot);
   });
 });
+
+describe('vote to reject', () => {
+  /** Round with letter A: Hana "Axyz" and Bob "Apple" for Food, Cat blank. */
+  function results(): GameState {
+    let s = playing();
+    s = reduce(s, { type: 'updateAnswers', playerId: 'h', answers: { Food: 'Axyz' } });
+    s = reduce(s, { type: 'updateAnswers', playerId: 'p2', answers: { Food: 'Apple' } });
+    return reduce(s, { type: 'tick', now: s.round!.endsAt + SUBMIT_GRACE_MS });
+  }
+  const vote = (s: GameState, voter: string, target = 'h', category = 'Food') =>
+    reduce(s, { type: 'voteReject', playerId: voter, targetId: target, category });
+
+  it('one vote out of two others is not enough', () => {
+    const s = vote(results(), 'p2');
+    expect(s.round!.votes).toHaveLength(1);
+    expect(s.round!.result!.scores.h.Food.points).toBe(10);
+  });
+
+  it('a majority of the other players rejects the answer and fixes totals', () => {
+    let s = results();
+    expect(s.totals.h).toBe(10);
+    s = vote(vote(s, 'p2'), 'p3');
+    expect(s.round!.result!.scores.h.Food).toMatchObject({ points: 0, rejected: true });
+    expect(s.round!.result!.roundTotals.h).toBe(0);
+    expect(s.totals.h).toBe(0);
+    expect(s.totals.p2).toBe(10);
+  });
+
+  it('voting again takes the vote back and restores points', () => {
+    let s = vote(vote(results(), 'p2'), 'p3');
+    s = vote(s, 'p3');
+    expect(s.round!.votes).toHaveLength(1);
+    expect(s.totals.h).toBe(10);
+    expect(s.round!.result!.scores.h.Food.rejected).toBe(false);
+  });
+
+  it('only counts connected players when deciding', () => {
+    let s = vote(results(), 'p3');
+    expect(s.round!.result!.scores.h.Food.rejected).toBe(false);
+    s = reduce(s, { type: 'disconnect', playerId: 'p2' });
+    // Recalculated on the next vote: now p3 is the only other voter, so 1 vote is a majority.
+    s = vote(vote(s, 'p3'), 'p3');
+    expect(s.round!.result!.scores.h.Food.rejected).toBe(true);
+  });
+
+  it("can't vote on your own, blank or unknown answers, or outside results", () => {
+    const s = results();
+    expectError(() => vote(s, 'h', 'h'), 'invalid_vote');
+    expectError(() => vote(s, 'h', 'p3'), 'invalid_vote');
+    expectError(() => vote(s, 'h', 'p2', 'Nope'), 'invalid_vote');
+    expectError(() => vote(playing(), 'p2'), 'wrong_phase');
+  });
+
+  it('votes reset in the next round', () => {
+    let s = vote(results(), 'p2');
+    s = reduce(s, { type: 'start', playerId: 'h', now: T0 + 200_000, random: seq(0) });
+    expect(s.round!.votes).toEqual([]);
+  });
+});

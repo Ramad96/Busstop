@@ -44,6 +44,7 @@ export interface ClientToServerEvents {
   'answers:update': (data: { answers: Answers }, ack?: AckFn) => void;
   'answers:submit': (data: { answers: Answers }, ack?: AckFn) => void;
   'clock:stop': (data: { answers: Answers }, ack?: AckFn) => void;
+  'answer:vote': (data: { targetId: PlayerId; category: string }, ack?: AckFn) => void;
 }
 
 export interface ServerToClientEvents {

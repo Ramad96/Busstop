@@ -3,6 +3,7 @@ import {
   allAnswersValid,
   isValidAnswer,
   MAX_ANSWER_LENGTH,
+  secondsLeft,
   STOP_CLOCK_MS,
   type Answers,
   type GameState,
@@ -11,6 +12,7 @@ import {
 import { Countdown } from '../components/Countdown';
 import { ErrorText } from '../components/ErrorText';
 import { LetterReveal } from '../components/LetterReveal';
+import { sfx } from '../fx/sound';
 import { useServerNow } from '../hooks';
 import { game } from '../net/socket';
 
@@ -66,6 +68,18 @@ function AnswerForm({ state, round, you }: { state: GameState; round: RoundState
   const allValid = allAnswersValid(answers, round.categories, round.letter);
   const canStop = allValid && !timeUp && remainingMs > STOP_CLOCK_MS;
   const stopper = stopperName(state, round);
+  const left = secondsLeft(round.endsAt, now);
+
+  // Tick for the last 10 seconds, buzz at zero.
+  useEffect(() => {
+    if (state.phase !== 'playing') return;
+    if (left > 0 && left <= 10) sfx.tick();
+    else if (left === 0) sfx.timeUp();
+  }, [left, state.phase]);
+
+  useEffect(() => {
+    if (round.stoppedBy) sfx.stop();
+  }, [round.stoppedBy]);
 
   const save = useCallback(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current);

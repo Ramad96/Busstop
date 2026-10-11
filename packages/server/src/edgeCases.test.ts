@@ -122,3 +122,25 @@ describe('edge cases', () => {
     expect(app.rooms.sweep()).toEqual([code]);
   });
 });
+
+describe('vote to reject', () => {
+  it('rejects an answer when the other players vote it out', async () => {
+    const { ann, ben } = await twoPlayers();
+    await ann.call('game:start');
+    advance(REVEAL_MS);
+    const s = await ann.waitFor((st) => st.phase === 'playing');
+    await ann.call('answers:update', { answers: { Food: `${s.round!.letter}xyz` } });
+    advance(10 * 60_000 + SUBMIT_GRACE_MS);
+    await ben.waitFor((st) => st.phase === 'results');
+    expect(await ann.call('answer:vote', { targetId: ann.id, category: 'Food' })).toMatchObject({
+      ok: false,
+      error: { code: 'invalid_vote' },
+    });
+    expect(await ben.call('answer:vote', { targetId: ann.id, category: 'Food' })).toEqual({
+      ok: true,
+    });
+    const after = await ann.waitFor((st) => st.round!.votes.length === 1);
+    expect(after.round!.result!.scores[ann.id].Food.rejected).toBe(true);
+    expect(after.totals[ann.id]).toBe(0);
+  });
+});

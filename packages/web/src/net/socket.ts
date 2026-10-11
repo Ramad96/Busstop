@@ -209,6 +209,10 @@ class GameClient {
   stopClock(answers: Answers) {
     return this.request('clock:stop', { answers });
   }
+
+  voteReject(targetId: PlayerId, category: string) {
+    return this.request('answer:vote', { targetId, category });
+  }
 }
 
 export const game = new GameClient();

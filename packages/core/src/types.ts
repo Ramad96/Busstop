@@ -63,6 +63,14 @@ export interface Round {
   /** Players who have sent their final (locked) answers. */
   submitted: PlayerId[];
   result: RoundResult | null;
+  /** Votes to reject answers, cast on the results screen. */
+  votes: Vote[];
+}
+
+export interface Vote {
+  voterId: PlayerId;
+  targetId: PlayerId;
+  category: string;
 }
 
 export interface GameState {
