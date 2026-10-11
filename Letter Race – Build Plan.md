@@ -88,12 +88,12 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 
 ### Phase 1 — Game rules in `core` (most important)
 
-- [ ] Types: `Player`, `Settings`, `Round`, `Answers`, `GamePhase` (lobby → reveal → playing → scoring → results)
-- [ ] `pickLetter(settings, random)` — pass the random function in so tests are repeatable
-- [ ] `normaliseAnswer()` and `isValidAnswer(answer, letter)`
-- [ ] `scoreRound(allAnswers)` → points per player per category
-- [ ] `applyStopClock(endsAt, now)` → new end time
-- [ ] A state machine: `reduce(state, action) → newState`
+- [x] Types: `Player`, `Settings`, `Round`, `Answers`, `GamePhase` (lobby → reveal → playing → scoring → results)
+- [x] `pickLetter(settings, random)` — pass the random function in so tests are repeatable
+- [x] `normaliseAnswer()` and `isValidAnswer(answer, letter)`
+- [x] `scoreRound(allAnswers)` → points per player per category
+- [x] `applyStopClock(endsAt, now)` → new end time
+- [x] A state machine: `reduce(state, action) → newState`
 
 **Done when:** 30+ unit tests pass, covering every scoring row in the table.
 

@@ -1,10 +1,10 @@
-import { CORE_VERSION } from '@letter-race/core';
+import { DEFAULT_SETTINGS } from '@letter-race/core';
 
 export function App() {
   return (
     <main>
       <h1>Letter Race</h1>
-      <p>core v{CORE_VERSION}</p>
+      <p>{DEFAULT_SETTINGS.categories.join(', ')}</p>
     </main>
   );
 }

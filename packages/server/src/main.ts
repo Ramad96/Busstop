@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { Server } from 'socket.io';
-import { CORE_VERSION } from '@letter-race/core';
+import { DEFAULT_SETTINGS } from '@letter-race/core';
 
 const port = Number(process.env.PORT ?? 3001);
 const httpServer = createServer((_req, res) => {
@@ -10,7 +10,7 @@ const httpServer = createServer((_req, res) => {
 const io = new Server(httpServer, { cors: { origin: '*' } });
 
 io.on('connection', (socket) => {
-  socket.emit('hello', { coreVersion: CORE_VERSION });
+  socket.emit('hello', { settings: DEFAULT_SETTINGS });
 });
 
 httpServer.listen(port, () => {
