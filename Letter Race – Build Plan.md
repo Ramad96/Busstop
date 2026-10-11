@@ -139,10 +139,10 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 
 ### Phase 5 — Results
 
-- [ ] Table: each category, each player's answer and points
-- [ ] Highlight unique answers vs shared ones
-- [ ] Running total and winner
-- [ ] Host: **Next round** or **End game**
+- [x] Table: each category, each player's answer and points
+- [x] Highlight unique answers vs shared ones
+- [x] Running total and winner
+- [x] Host: **Next round** or **End game**
 
 **Done when:** scores on screen match what you work out by hand.
 

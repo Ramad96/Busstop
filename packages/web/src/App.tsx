@@ -5,6 +5,7 @@ import { Home } from './screens/Home';
 import { JoinCode } from './screens/JoinCode';
 import { Lobby } from './screens/Lobby';
 import { Profile } from './screens/Profile';
+import { Results } from './screens/Results';
 import { Round } from './screens/Round';
 
 type View =
@@ -35,11 +36,7 @@ export function App() {
         content = <Round state={state} you={you} />;
         break;
       case 'results':
-        content = (
-          <div className="screen center">
-            <p>Results coming in Phase 5</p>
-          </div>
-        );
+        content = <Results state={state} you={you} />;
     }
   } else if (rejoining) {
     content = (
