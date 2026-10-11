@@ -145,3 +145,20 @@ Take a few samples and keep the one with the smallest round trip. Remaining time
 3. The server marks you connected and sends `state`, including your saved answers.
 
 If the host disconnects, the next connected player (in join order) becomes host.
+
+## Edge cases
+
+- **Host leaves or disconnects:** host passes to the next connected player in join order.
+  The old host does not get it back when they return.
+- **Refresh mid-round:** drafts sent with `answers:update` are kept on the server and come
+  back in `state.round.answers[you]` after `room:rejoin`.
+- **Join mid-round:** the player is added with `spectating: true`, isn't in
+  `round.participants`, and gets `not_participant` for answer events. They play from the
+  next `game:start`. Joining during `results` makes you a normal player straight away.
+- **Several tabs, one player:** the player only shows as disconnected when their last tab
+  closes.
+- **Cleanup:** a room with nobody connected is deleted after 30 minutes; a room whose last
+  player sends `room:leave` is deleted immediately. `room:rejoin` then fails with
+  `room_not_found` and the client should go back to the home screen.
+- **Removed from a game:** if a `state` arrives that doesn't list `you` in `players`, the
+  client should treat itself as out of the game.

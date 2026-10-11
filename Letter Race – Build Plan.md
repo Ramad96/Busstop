@@ -150,10 +150,10 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 
 ### Phase 6 — Edge cases
 
-- [ ] Host leaves → next player becomes host
-- [ ] Player refreshes mid-round → rejoins with answers saved
-- [ ] Join a game in progress → watch until next round
-- [ ] Empty rooms deleted after 30 minutes
+- [x] Host leaves → next player becomes host
+- [x] Player refreshes mid-round → rejoins with answers saved
+- [x] Join a game in progress → watch until next round
+- [x] Empty rooms deleted after 30 minutes
 
 **Done when:** you can refresh, close tabs and rejoin without breaking a game.
 

@@ -23,6 +23,9 @@ export class RoomError extends Error {
   }
 }
 
+/** Rooms with nobody connected are deleted after this long. */
+export const EMPTY_ROOM_TTL_MS = 30 * 60 * 1000;
+
 export interface Room {
   state: GameState;
   timer: ReturnType<typeof setTimeout> | null;
@@ -117,6 +120,22 @@ export class RoomManager {
     for (const room of this.rooms.values()) this.tick(room);
   }
 
+  /** Deletes rooms that have had nobody connected for 30 minutes, or have no players at all. */
+  sweep(): string[] {
+    const now = this.now();
+    const deleted: string[] = [];
+    for (const [code, room] of this.rooms) {
+      const abandoned =
+        room.state.players.length === 0 ||
+        (room.emptySince !== null && now - room.emptySince >= EMPTY_ROOM_TTL_MS);
+      if (abandoned) {
+        this.delete(code);
+        deleted.push(code);
+      }
+    }
+    return deleted;
+  }
+
   delete(code: string): void {
     const room = this.rooms.get(code);
     if (!room) return;
@@ -152,6 +171,7 @@ export class RoomManager {
     else room.emptySince ??= this.now();
     this.schedule(room);
     this.onChange(next.code, next);
+    if (next.players.length === 0) this.delete(next.code);
     return next;
   }
 

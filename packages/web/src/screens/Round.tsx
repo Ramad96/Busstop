@@ -43,6 +43,9 @@ function Watching({ state, round }: { state: GameState; round: RoundState }) {
       <div className="round-letter big">{round.letter}</div>
       <Countdown endsAt={round.endsAt} now={now} />
       <p className="muted">You joined mid-round – you'll play in the next one.</p>
+      <button className="btn-link" onClick={() => game.leaveRoom()}>
+        Leave game
+      </button>
       {state.phase === 'scoring' && <p className="muted">Time's up! Scoring…</p>}
     </div>
   );

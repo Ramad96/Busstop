@@ -10,6 +10,8 @@ export interface AppOptions {
   random?: RandomFn;
   /** Allowed web origins (CORS). Defaults to any origin. */
   corsOrigin?: string | string[];
+  /** How often to look for abandoned rooms. */
+  sweepIntervalMs?: number;
 }
 
 export interface App {
@@ -40,6 +42,8 @@ export function createApp(options: AppOptions = {}): App {
     onChange: (_code, state) => broadcastState(io, state, now()),
   });
   attachSocketHandlers(io, rooms, now);
+  const sweeper = setInterval(() => rooms.sweep(), options.sweepIntervalMs ?? 60_000);
+  sweeper.unref();
 
   return {
     httpServer,
@@ -51,6 +55,7 @@ export function createApp(options: AppOptions = {}): App {
       }),
     close: () =>
       new Promise((resolve) => {
+        clearInterval(sweeper);
         rooms.dispose();
         io.close(() => resolve());
       }),

@@ -98,6 +98,12 @@ class GameClient {
     socket.on('disconnect', () => this.set({ status: 'disconnected' }));
     socket.on('connect_error', () => this.set({ status: 'disconnected' }));
     socket.on('state', ({ state, you }) => {
+      // Removed from the game (e.g. left in another tab): forget it.
+      if (!state.players.some((p) => p.id === you)) {
+        storage.remove(CODE_KEY);
+        this.set({ game: null, you: null, rejoining: false });
+        return;
+      }
       storage.set(CODE_KEY, state.code);
       this.set({ game: state, you, rejoining: false });
     });

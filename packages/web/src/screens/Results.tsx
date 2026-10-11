@@ -45,6 +45,9 @@ export function Results({ state, you }: { state: GameState; you: string | null }
 
   return (
     <div className="screen results">
+      <button className="btn-link back" onClick={() => game.leaveRoom()}>
+        ← Leave
+      </button>
       <header className="results-header">
         <div className="round-letter">{round.letter}</div>
         <div>
