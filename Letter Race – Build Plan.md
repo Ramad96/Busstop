@@ -170,7 +170,7 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 
 ### Phase 8 — Go live and prep for iOS
 
-- [ ] Deploy server and web app
+- [x] Deploy server and web app
 - [x] Check `PROTOCOL.md` is complete and up to date
 - [x] Make sure `core` has zero browser imports
 
