@@ -5,6 +5,7 @@ import { Home } from './screens/Home';
 import { JoinCode } from './screens/JoinCode';
 import { Lobby } from './screens/Lobby';
 import { Profile } from './screens/Profile';
+import { Round } from './screens/Round';
 
 type View =
   { name: 'home' } | { name: 'code'; code?: string } | { name: 'profile'; code: string | null };
@@ -28,10 +29,15 @@ export function App() {
       case 'lobby':
         content = <Lobby state={state} you={you} />;
         break;
-      default:
+      case 'reveal':
+      case 'playing':
+      case 'scoring':
+        content = <Round state={state} you={you} />;
+        break;
+      case 'results':
         content = (
           <div className="screen center">
-            <p>Round in progress… (coming in Phase 4)</p>
+            <p>Results coming in Phase 5</p>
           </div>
         );
     }

@@ -127,11 +127,11 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 
 ### Phase 4 — Playing the round
 
-- [ ] Letter-from-a-hat animation (\~3 seconds, same on all devices)
-- [ ] One input per category, with a tick when the first letter is right
-- [ ] Countdown worked out from server `endsAt`
-- [ ] **Stop the clock** button, locked until every field is valid
-- [ ] Auto-submit when time hits 0
+- [x] Letter-from-a-hat animation (\~3 seconds, same on all devices)
+- [x] One input per category, with a tick when the first letter is right
+- [x] Countdown worked out from server `endsAt`
+- [x] **Stop the clock** button, locked until every field is valid
+- [x] Auto-submit when time hits 0
 
 **Done when:** two devices play a full round and their timers match within 1 second.
 
