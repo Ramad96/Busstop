@@ -12,5 +12,5 @@ services:
       - key: NODE_VERSION
         value: '22'
       - key: CORS_ORIGIN
-        # Comma-separated list, e.g. https://letter-race.vercel.app
+        # Comma-separated list, e.g. https://ramad96.github.io
         sync: false

@@ -1,42 +1,50 @@
 # Deploying Letter Race
 
-Two parts: the **server** (Node + Socket.IO, needs to stay running) and the **web app**
-(static files). Free tiers on Render and Vercel are enough for playing with friends.
+Two parts:
+
+- **Web app** – static files, hosted free on **GitHub Pages** (built by
+  `.github/workflows/pages.yml` on every push to `main`).
+- **Server** – Node + Socket.IO. It must stay running (open connections, rooms in memory,
+  timers), so it can't run on GitHub Pages or on serverless hosts like Vercel. Render's free
+  tier works; sign up with "Continue with GitHub".
 
 ## 1. Server on Render
 
-1. Push this repo to GitHub.
-2. In [Render](https://render.com): **New → Blueprint**, pick the repo. It reads
-   `render.yaml` and creates `letter-race-server`.
-3. When asked for `CORS_ORIGIN`, enter the web app URL from step 2 (you can come back and
-   set it after the web app is deployed). Several URLs can be comma-separated.
-4. Once deployed, open `https://<your-service>.onrender.com/health` – it should say
+1. In [Render](https://render.com), sign in with GitHub, then **New → Blueprint** and pick
+   this repo. It reads `render.yaml` and creates `letter-race-server`.
+2. When asked for `CORS_ORIGIN`, enter `https://<your-github-username>.github.io`
+   (origin only, no `/LetterRace` path). Lowercase, e.g. `https://ramad96.github.io`.
+3. Once deployed, open `https://<your-service>.onrender.com/health` – it should say
    `{"ok":true,...}`.
 
 Notes:
 
 - Free Render services sleep after ~15 minutes idle; the first visit then takes ~30–60 s
-  to wake up. A paid instance (or Fly.io with `min_machines_running = 1`) avoids that.
+  to wake up (the app shows "Connecting…" meanwhile).
 - Rooms live in memory. A redeploy or restart ends games in progress.
 - Run only **one** instance: rooms aren't shared between instances.
 
-## 2. Web app on Vercel
+## 2. Web app on GitHub Pages
 
-1. In [Vercel](https://vercel.com): **Add New → Project**, import the repo. Keep the root
-   directory as the repo root – `vercel.json` sets the build.
-2. Add an environment variable `VITE_SERVER_URL` = your Render URL, e.g.
+1. Repo **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+2. Repo **Settings → Secrets and variables → Actions → Variables → New repository
+   variable**: `VITE_SERVER_URL` = your Render URL, e.g.
    `https://letter-race-server.onrender.com`.
-3. Deploy. Share the Vercel URL with friends – game links look like
-   `https://<app>.vercel.app/?code=ABCD`.
-4. Put the Vercel URL into the server's `CORS_ORIGIN` on Render and redeploy the server.
+3. Re-run the **Deploy web to GitHub Pages** workflow (Actions tab), or push to `main`.
+4. The site is at `https://<your-github-username>.github.io/<repo-name>/`. Game links look
+   like `https://ramad96.github.io/LetterRace/?code=ABCD`.
+
+The workflow builds with `VITE_BASE=/<repo-name>/` so assets load from the Pages sub-path.
+It fails with a clear message until `VITE_SERVER_URL` is set.
 
 ## Environment variables
 
 | Where  | Name              | Example                                   | Default            |
 | ------ | ----------------- | ----------------------------------------- | ------------------ |
 | server | `PORT`            | `10000` (Render sets this)                | `3001`             |
-| server | `CORS_ORIGIN`     | `https://letter-race.vercel.app`          | any origin         |
+| server | `CORS_ORIGIN`     | `https://ramad96.github.io`               | any origin         |
 | web    | `VITE_SERVER_URL` | `https://letter-race-server.onrender.com` | `<page host>:3001` |
+| web    | `VITE_BASE`       | `/LetterRace/` (set by the workflow)      | `/`                |
 
 ## Before you deploy
 
