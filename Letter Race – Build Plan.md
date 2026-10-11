@@ -101,13 +101,13 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 
 ### Phase 2 — Server (the referee)
 
-- [ ] Create room → unique code, creator is host
-- [ ] Join room with name + character; reject duplicate names
-- [ ] Host-only actions: update settings, start, play again
-- [ ] Timer: server sends `endsAt` timestamp, not a ticking number
-- [ ] Receive answers, score with `core`, broadcast results
-- [ ] Handle reconnects (same player ID saved in browser)
-- [ ] Write `docs/PROTOCOL.md` listing every event and its data
+- [x] Create room → unique code, creator is host
+- [x] Join room with name + character; reject duplicate names
+- [x] Host-only actions: update settings, start, play again
+- [x] Timer: server sends `endsAt` timestamp, not a ticking number
+- [x] Receive answers, score with `core`, broadcast results
+- [x] Handle reconnects (same player ID saved in browser)
+- [x] Write `docs/PROTOCOL.md` listing every event and its data
 
 **Done when:** a test script can run a full game with 3 fake players.
 

@@ -5,3 +5,5 @@ export * from './answers';
 export * from './scoring';
 export * from './clock';
 export * from './state';
+export * from './view';
+export * from './protocol';

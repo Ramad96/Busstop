@@ -1,18 +1,15 @@
-import { createServer } from 'node:http';
-import { Server } from 'socket.io';
-import { DEFAULT_SETTINGS } from '@letter-race/core';
+import { createApp } from './app';
 
 const port = Number(process.env.PORT ?? 3001);
-const httpServer = createServer((_req, res) => {
-  res.writeHead(200, { 'content-type': 'text/plain' });
-  res.end('Letter Race server');
-});
-const io = new Server(httpServer, { cors: { origin: '*' } });
+const corsOrigin = process.env.CORS_ORIGIN?.split(',').map((s) => s.trim());
 
-io.on('connection', (socket) => {
-  socket.emit('hello', { settings: DEFAULT_SETTINGS });
+const app = createApp({ corsOrigin });
+app.listen(port).then((actual) => {
+  console.log(`Letter Race server listening on :${actual}`);
 });
 
-httpServer.listen(port, () => {
-  console.log(`Letter Race server listening on :${port}`);
-});
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    app.close().then(() => process.exit(0));
+  });
+}
