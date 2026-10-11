@@ -3,6 +3,8 @@
 A real-time party word game: everyone gets the same letter, then races to fill in a boy's
 name, girl's name, country, food, place and brand before the clock runs out.
 
+**Play:** https://letterrace.amanahdigital.co.uk
+
 - Rules: [docs/RULES.md](docs/RULES.md)
 - Client/server messages: [docs/PROTOCOL.md](docs/PROTOCOL.md)
 - Deploying: [docs/DEPLOY.md](docs/DEPLOY.md)
