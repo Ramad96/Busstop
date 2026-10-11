@@ -46,6 +46,7 @@ always one of:
 | `answers:update`  | `{ answers: Record<category, string> }` | `{}`                  | Participant, in `playing`. Saves a draft.          |
 | `answers:submit`  | `{ answers }`                           | `{}`                  | Participant, in `playing` or `scoring`. Final.     |
 | `clock:stop`      | `{ answers }`                           | `{}`                  | Participant, in `playing`, all answers valid.      |
+| `answer:vote`     | `{ targetId, category }`                | `{}`                  | Participant, in `results`. Toggles your vote.      |
 
 Notes:
 
@@ -57,6 +58,10 @@ Notes:
 - `answers:update` should be sent (throttled) as the player types, so a refresh mid-round
   keeps their answers and the server has them even if the final submit is lost.
 - `clock:stop` sends the player's answers too; the server checks they're all valid.
+- `answer:vote` toggles your vote to reject another player's answer (not your own, not a
+  blank). An answer is rejected – 0 points, and it stops counting as shared – when more
+  than half of the other connected participants vote for it. Scores and `totals` are
+  recalculated on every vote.
 
 ## Broadcasts (server → client)
 
@@ -83,6 +88,7 @@ GameState {
     answers,        // Record<playerId, Record<category, string>>
     submitted,      // playerIds whose final answers arrived
     result: null | { letter, categories, scores, roundTotals },
+    votes,          // { voterId, targetId, category }[] – reject votes on the results screen
   };
   totals: Record<playerId, number>;
   usedLetters: string[];
@@ -137,6 +143,7 @@ Take a few samples and keep the one with the smallest round trip. Remaining time
 | `answers_incomplete` | Stop the clock needs every answer valid  |
 | `already_submitted`  | Final answers were already sent          |
 | `not_participant`    | You're watching this round (joined late) |
+| `invalid_vote`       | Can't vote on that answer                |
 
 ## Reconnecting
 
