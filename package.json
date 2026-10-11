@@ -10,7 +10,9 @@
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "audit:core": "node scripts/audit-core.mjs",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm audit:core && pnpm build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -22,5 +24,8 @@
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.1",
     "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

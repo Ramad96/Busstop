@@ -171,8 +171,8 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 ### Phase 8 — Go live and prep for iOS
 
 - [ ] Deploy server and web app
-- [ ] Check `PROTOCOL.md` is complete and up to date
-- [ ] Make sure `core` has zero browser imports
+- [x] Check `PROTOCOL.md` is complete and up to date
+- [x] Make sure `core` has zero browser imports
 
 **Done when:** friends can play from their own phones using a public link.
 

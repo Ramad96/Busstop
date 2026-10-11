@@ -1,0 +1,16 @@
+# Render Blueprint for the Letter Race server (Socket.IO referee).
+# In Render: New → Blueprint → pick this repo. Then set CORS_ORIGIN to your web app URL.
+services:
+  - type: web
+    name: letter-race-server
+    runtime: node
+    plan: free
+    buildCommand: npm install -g pnpm@9 && pnpm install --frozen-lockfile && pnpm --filter @letter-race/server build
+    startCommand: node packages/server/dist/main.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: '22'
+      - key: CORS_ORIGIN
+        # Comma-separated list, e.g. https://letter-race.vercel.app
+        sync: false

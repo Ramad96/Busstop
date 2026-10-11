@@ -38,6 +38,7 @@ const CODE_KEY = 'letterRace.code';
 function serverUrl(): string {
   const configured = import.meta.env.VITE_SERVER_URL as string | undefined;
   if (configured) return configured;
+  if (import.meta.env.PROD) console.warn('VITE_SERVER_URL is not set; guessing the server URL.');
   // Dev default: same host as the page (works from a phone on the same Wi-Fi), port 3001.
   return `${location.protocol}//${location.hostname}:3001`;
 }
