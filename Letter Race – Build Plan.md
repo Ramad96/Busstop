@@ -115,11 +115,11 @@ Do one phase at a time. Tick it off only when "Done when" is true.
 
 ### Phase 3 — Lobby screens
 
-- [ ] Home: **Host game** or **Join game**
-- [ ] Join: enter code
-- [ ] Pick name + character (6–8 simple emoji or coloured shapes)
-- [ ] Waiting room: player list, code shown big, share link
-- [ ] Host only: settings panel + **Start** button
+- [x] Home: **Host game** or **Join game**
+- [x] Join: enter code
+- [x] Pick name + character (6–8 simple emoji or coloured shapes)
+- [x] Waiting room: player list, code shown big, share link
+- [x] Host only: settings panel + **Start** button
 
 **Done when:** you can join from your phone and laptop and see each other in the lobby.
 
