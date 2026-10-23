@@ -19,7 +19,7 @@ pnpm test
 pnpm check   # lint, typecheck, tests, core purity audit, build
 ```
 
-`pnpm --filter @letter-race/server simulate` plays a 3-player round against a running server.
+`pnpm --filter @busstop/server simulate` plays a 3-player round against a running server.
 
 ## Packages
 

@@ -1,9 +1,9 @@
 /**
  * Plays one real-time round against a running server with 3 fake players.
- * Usage: pnpm --filter @letter-race/server simulate [url]
+ * Usage: pnpm --filter @busstop/server simulate [url]
  */
 import { randomUUID } from 'node:crypto';
-import type { JoinedRoom } from '@letter-race/core';
+import type { JoinedRoom } from '@busstop/core';
 import { TestClient } from './testClient';
 
 const url = process.argv[2] ?? process.env.SERVER_URL ?? 'http://localhost:3001';

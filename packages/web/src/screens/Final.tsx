@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { standings, winners, type GameState } from '@letter-race/core';
+import { standings, winners, type GameState } from '@busstop/core';
 import { Avatar } from '../components/Avatar';
 import { ErrorText } from '../components/ErrorText';
 import { celebrate } from '../fx/confetti';

@@ -8,7 +8,7 @@ import {
   type Challenge,
   type GameState,
   type Player,
-} from '@letter-race/core';
+} from '@busstop/core';
 import { Avatar } from '../components/Avatar';
 import { ErrorText } from '../components/ErrorText';
 import { LetterSign } from '../components/Sign';

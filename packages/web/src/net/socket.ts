@@ -15,7 +15,7 @@ import type {
   PlayerId,
   ServerToClientEvents,
   Settings,
-} from '@letter-race/core';
+} from '@busstop/core';
 import { bestOffset, type ClockSample } from './clock';
 import { storage } from './storage';
 

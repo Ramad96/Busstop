@@ -1,7 +1,7 @@
 import { createServer, type Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Server } from 'socket.io';
-import type { RandomFn } from '@letter-race/core';
+import type { RandomFn } from '@busstop/core';
 import { RoomManager } from './rooms';
 import { attachSocketHandlers, broadcastState, type GameServer } from './sockets';
 

@@ -1,4 +1,4 @@
-import { secondsLeft } from '@letter-race/core';
+import { secondsLeft } from '@busstop/core';
 import { formatSeconds } from '../util';
 import { DotMatrix } from './DotMatrix';
 

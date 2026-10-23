@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { normaliseRoomCode, ROOM_CODE_LENGTH } from '@letter-race/core';
+import { normaliseRoomCode, ROOM_CODE_LENGTH } from '@busstop/core';
 import { ErrorText } from '../components/ErrorText';
 import { game } from '../net/socket';
 
