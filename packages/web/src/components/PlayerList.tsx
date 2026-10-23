@@ -12,8 +12,8 @@ export function PlayerList({ game, you }: { game: GameState; you: string | null 
             {p.id === you && <span className="tag">you</span>}
           </span>
           {p.id === game.hostId && (
-            <span className="host-badge" title="Host">
-              👑
+            <span className="tag driver" title="Host – runs the game">
+              🚌 driver
             </span>
           )}
           {!p.connected && <span className="tag muted">away</span>}

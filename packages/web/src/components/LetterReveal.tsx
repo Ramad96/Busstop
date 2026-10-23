@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { allowedLetters, REVEAL_MS, type Settings } from '@letter-race/core';
 import { sfx } from '../fx/sound';
 import { useServerNow } from '../hooks';
+import { DotMatrix } from './DotMatrix';
+import { LetterSign } from './Sign';
 
 /**
- * Letter coming out of a hat. Driven by the server's revealEndsAt so every device
- * shows the same frame at the same moment (and a refresh lands mid-animation).
+ * The bus pulls in with the letter on its destination blind. Driven by the server's
+ * revealEndsAt so every device shows the same frame (and a refresh lands mid-way).
  */
 export function LetterReveal({
   letter,
@@ -16,13 +18,16 @@ export function LetterReveal({
   revealEndsAt: number;
   settings: Settings;
 }) {
-  const now = useServerNow(60);
+  const now = useServerNow(50);
   const elapsed = Math.max(0, REVEAL_MS - (revealEndsAt - now));
+  const progress = Math.min(1, elapsed / (REVEAL_MS * 0.65));
   const landed = elapsed >= REVEAL_MS * 0.7;
   const pool = allowedLetters(settings);
-  // Shuffle through letters, slowing down, then land on the real one.
+  // The blind flicks through letters, slowing down, then lands on the real one.
   const step = Math.floor(Math.pow(elapsed / 40, 0.8));
   const shown = landed ? letter : pool[(step * 7) % pool.length];
+  // Ease out: the bus slows as it pulls in.
+  const busX = (1 - (1 - Math.pow(1 - progress, 3))) * 110;
 
   useEffect(() => {
     if (landed) sfx.ding();
@@ -30,10 +35,22 @@ export function LetterReveal({
 
   return (
     <div className="screen center reveal">
-      <p className="muted reveal-caption">{landed ? 'Your letter is…' : 'Shaking the hat…'}</p>
-      <div className={`hat ${landed ? 'done' : 'shaking'}`}>🎩</div>
-      <div key={landed ? 'final' : 'spin'} className={`reveal-letter ${landed ? 'landed' : ''}`}>
-        {shown}
+      <DotMatrix className="reveal-blind">
+        <span className="dm-label">{landed ? 'THIS ROUND' : 'NEXT LETTER'}</span>
+        <span className="dm-big">{shown}</span>
+      </DotMatrix>
+      <div className="reveal-stage">
+        {landed ? (
+          <div className="reveal-landed">
+            <LetterSign letter={letter} size="lg" />
+            <p className="reveal-caption">Ding ding! It's {letter}</p>
+          </div>
+        ) : (
+          <div className="reveal-bus" style={{ transform: `translateX(${busX}vw)` }} aria-hidden>
+            🚌
+          </div>
+        )}
+        <div className="road" aria-hidden />
       </div>
     </div>
   );

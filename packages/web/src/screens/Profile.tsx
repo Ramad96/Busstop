@@ -44,7 +44,8 @@ export function Profile({ code, onBack }: { code: string | null; onBack: () => v
       <button type="button" className="btn-link back" onClick={onBack}>
         ← Back
       </button>
-      <h2>{code ? `Joining ${code}` : 'Host a game'}</h2>
+      <p className="kicker">{code ? `Game ${code}` : 'Start a game'}</p>
+      <h2>Who's getting on?</h2>
       <label className="field">
         <span>Your name</span>
         <input
@@ -58,12 +59,12 @@ export function Profile({ code, onBack }: { code: string | null; onBack: () => v
         />
       </label>
       <div className="field">
-        <span>Pick a character</span>
+        <span>Pick your passenger</span>
         <CharacterPicker value={character} onChange={setCharacter} />
       </div>
       <ErrorText message={error} />
       <button className="btn btn-primary btn-big" disabled={!name.trim() || busy}>
-        {busy ? 'One sec…' : code ? 'Join game' : 'Create game'}
+        {busy ? 'One sec…' : code ? '🎫 Hop on' : '🚌 Create game'}
       </button>
     </form>
   );

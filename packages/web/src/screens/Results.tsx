@@ -11,6 +11,7 @@ import {
 } from '@letter-race/core';
 import { Avatar } from '../components/Avatar';
 import { ErrorText } from '../components/ErrorText';
+import { LetterSign } from '../components/Sign';
 import { celebrate } from '../fx/confetti';
 import { sfx } from '../fx/sound';
 import { game } from '../net/socket';
@@ -74,7 +75,7 @@ export function Results({ state, you }: { state: GameState; you: string | null }
         ← Leave
       </button>
       <header className="results-header">
-        <div className="round-letter">{round.letter}</div>
+        <LetterSign letter={round.letter} />
         <div>
           <p className="kicker">
             Round {round.number} of {state.settings.totalRounds}

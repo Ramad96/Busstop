@@ -32,7 +32,9 @@ export function JoinCode({
       <button type="button" className="btn-link back" onClick={onBack}>
         ← Back
       </button>
-      <h2>Enter game code</h2>
+      <p className="kicker">Join a game</p>
+      <h2>What's the game code?</h2>
+      <p className="muted">It's the 4 letters on the host's screen.</p>
       <input
         className="code-input"
         value={clean}

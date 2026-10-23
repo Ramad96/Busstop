@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { GameState, Settings } from '@letter-race/core';
+import { DotMatrix } from '../components/DotMatrix';
 import { ErrorText } from '../components/ErrorText';
 import { PlayerList } from '../components/PlayerList';
 import { SettingsPanel } from '../components/SettingsPanel';
@@ -16,7 +17,11 @@ export function Lobby({ state, you }: { state: GameState; you: string | null }) 
     const url = shareLink(state.code);
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Letter Race', text: `Join my game: ${state.code}`, url });
+        await navigator.share({
+          title: 'Busstop',
+          text: `Hop on my Busstop game: ${state.code}`,
+          url,
+        });
         return;
       } catch {
         // Cancelled or unsupported – fall back to copying.
@@ -53,16 +58,18 @@ export function Lobby({ state, you }: { state: GameState; you: string | null }) 
         </button>
       </div>
       <div className="code-card">
-        <span className="label">Game code</span>
-        <span className="big-code">{state.code}</span>
-        <button className="btn btn-small" onClick={share}>
-          {copied ? 'Link copied!' : 'Share link'}
+        <DotMatrix className="code-blind" label={`Game code ${state.code}`}>
+          <span className="dm-label">GAME CODE</span>
+          <span className="big-code">{state.code}</span>
+        </DotMatrix>
+        <button className="btn btn-small btn-ghost" onClick={share}>
+          {copied ? '✓ Link copied' : '📤 Share link'}
         </button>
       </div>
 
       <section>
         <h3>
-          Players <span className="count">{state.players.length}</span>
+          Passengers <span className="count">{state.players.length}</span>
         </h3>
         <PlayerList game={state} you={you} />
       </section>
@@ -70,8 +77,8 @@ export function Lobby({ state, you }: { state: GameState; you: string | null }) 
       {isHost ? (
         <SettingsPanel settings={state.settings} onChange={updateSettings} />
       ) : (
-        <section className="settings-summary">
-          <h3>Settings</h3>
+        <section className="settings-summary panel">
+          <h3 className="panel-title">Timetable</h3>
           <p>
             {state.settings.totalRounds} rounds · ⏱ {formatSeconds(state.settings.roundSeconds)} ·{' '}
             {state.settings.includeHardLetters ? 'All letters' : 'No hard letters'}
@@ -91,10 +98,10 @@ export function Lobby({ state, you }: { state: GameState; you: string | null }) 
       <div className="sticky-footer">
         {isHost ? (
           <button className="btn btn-primary btn-big" onClick={start} disabled={starting}>
-            {state.players.length < 2 ? 'Start (solo)' : 'Start!'}
+            {state.players.length < 2 ? 'Set off (solo)' : 'Ding ding – set off!'}
           </button>
         ) : (
-          <p className="waiting">Waiting for the host to start…</p>
+          <p className="waiting">Waiting for the driver to set off…</p>
         )}
       </div>
     </div>

@@ -1,7 +1,7 @@
-# Letter Race
+# Busstop
 
-A real-time party word game: everyone gets the same letter, then races to fill in a boy's
-name, girl's name, country, food, place and brand before the clock runs out.
+A real-time party word game: everyone gets the same letter, then races to fill in every
+category. First to finish shouts BUSSTOP! and everyone else has 10 seconds left.
 
 **Play:** https://letterrace.amanahdigital.co.uk
 

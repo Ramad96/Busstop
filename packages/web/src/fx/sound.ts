@@ -75,20 +75,29 @@ export function vibrate(pattern: number | number[]) {
   }
 }
 
+/** A bus bell: a bright strike with a couple of overtones, decaying fast. */
+function bell(delayMs = 0) {
+  tone(1568, 650, { volume: 0.18, delayMs });
+  tone(2350, 420, { volume: 0.07, delayMs });
+  tone(3920, 220, { volume: 0.04, delayMs });
+}
+
 export const sfx = {
   tick() {
     tone(1000, 60, { type: 'square', volume: 0.08 });
     vibrate(25);
   },
+  /** Ding ding – the driver's "off we go". */
   ding() {
-    tone(880, 180, { volume: 0.2 });
-    tone(1320, 320, { volume: 0.15, delayMs: 120 });
-    vibrate(40);
+    bell();
+    bell(260);
+    vibrate([40, 80, 40]);
   },
+  /** Someone pressed BUSSTOP! */
   stop() {
-    tone(660, 120, { type: 'triangle', volume: 0.2 });
-    tone(440, 220, { type: 'triangle', volume: 0.2, delayMs: 120 });
-    vibrate([60, 40, 60]);
+    bell();
+    tone(420, 260, { type: 'square', volume: 0.06, delayMs: 60 });
+    vibrate([80, 40, 80]);
   },
   timeUp() {
     tone(300, 500, { type: 'sawtooth', volume: 0.12, slideTo: 150 });

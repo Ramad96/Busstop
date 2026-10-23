@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { HowToPlay } from './components/HowToPlay';
 import { normaliseRoomCode } from '@letter-race/core';
 import { setMuted, useMuted } from './fx/sound';
 import { useGame } from './net/socket';
@@ -26,6 +27,8 @@ export function App() {
   const { status, game: state, you, rejoining } = useGame();
   const [view, setView] = useState<View>(initialView);
   const muted = useMuted();
+  const [howTo, setHowTo] = useState(false);
+  const inRound = !!state && ['reveal', 'playing', 'scoring'].includes(state.phase);
 
   let content;
   if (state) {
@@ -47,7 +50,7 @@ export function App() {
   } else if (rejoining) {
     content = (
       <div className="screen center">
-        <p className="muted">Getting you back in…</p>
+        <p className="muted">Getting you back on the bus…</p>
       </div>
     );
   } else if (view.name === 'code') {
@@ -65,6 +68,7 @@ export function App() {
       <Home
         onHost={() => setView({ name: 'profile', code: null })}
         onJoin={() => setView({ name: 'code' })}
+        onHowTo={() => setHowTo(true)}
       />
     );
   }
@@ -73,17 +77,27 @@ export function App() {
     <div className="app">
       {status !== 'connected' && (
         <div className="connection-banner" role="status">
-          {status === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
+          {status === 'connecting'
+            ? '🚌 Bus on its way – connecting…'
+            : '📶 Lost signal – reconnecting…'}
         </div>
       )}
       {content}
-      <button
-        className="mute-toggle"
-        onClick={() => setMuted(!muted)}
-        aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
-      >
-        {muted ? '🔇' : '🔊'}
-      </button>
+      <div className="top-actions">
+        {!inRound && (
+          <button className="icon-btn" onClick={() => setHowTo(true)} aria-label="How to play">
+            ?
+          </button>
+        )}
+        <button
+          className="icon-btn"
+          onClick={() => setMuted(!muted)}
+          aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
+        >
+          {muted ? '🔇' : '🔊'}
+        </button>
+      </div>
+      {howTo && <HowToPlay onClose={() => setHowTo(false)} />}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
 import { Countdown } from '../components/Countdown';
 import { ErrorText } from '../components/ErrorText';
 import { LetterReveal } from '../components/LetterReveal';
+import { LetterSign } from '../components/Sign';
 import { sfx } from '../fx/sound';
 import { useServerNow } from '../hooks';
 import { game } from '../net/socket';
@@ -42,9 +43,9 @@ function Watching({ state, round }: { state: GameState; round: RoundState }) {
   const now = useServerNow();
   return (
     <div className="screen center">
-      <div className="round-letter big">{round.letter}</div>
+      <LetterSign letter={round.letter} size="lg" />
       <Countdown endsAt={round.endsAt} now={now} />
-      <p className="muted">You joined mid-round – you'll play in the next one.</p>
+      <p className="muted">You got on mid-round – you'll play from the next one.</p>
       <button className="btn-link" onClick={() => game.leaveRoom()}>
         Leave game
       </button>
@@ -68,6 +69,9 @@ function AnswerForm({ state, round, you }: { state: GameState; round: RoundState
   const allValid = allAnswersValid(answers, round.categories, round.letter);
   const canStop = allValid && !timeUp && remainingMs > STOP_CLOCK_MS;
   const stopper = stopperName(state, round);
+  const filled = round.categories.filter((c) =>
+    isValidAnswer(answers[c] ?? '', round.letter),
+  ).length;
   const left = secondsLeft(round.endsAt, now);
 
   // Tick for the last 10 seconds, buzz at zero.
@@ -125,20 +129,23 @@ function AnswerForm({ state, round, you }: { state: GameState; round: RoundState
   return (
     <div className={`screen round ${timeUp ? 'locked' : ''}`}>
       <header className="round-header">
-        <div className="round-letter" aria-label={`Letter ${round.letter}`}>
-          {round.letter}
+        <LetterSign letter={round.letter} />
+        <div className="round-meta">
+          <span className="kicker">
+            Round {round.number} of {state.settings.totalRounds}
+          </span>
+          <Countdown endsAt={round.endsAt} now={now} />
         </div>
-        <Countdown endsAt={round.endsAt} now={now} />
       </header>
 
       {stopper && !timeUp && (
         <div className="banner stop-banner" role="status">
-          ⏰ {stopper} stopped the clock!
+          🚏 {stopper} called BUSSTOP! 10 seconds left
         </div>
       )}
       {timeUp && (
         <div className="banner timeup-banner" role="status">
-          Time's up! Sending answers…
+          Time's up! Collecting answers…
         </div>
       )}
 
@@ -185,11 +192,13 @@ function AnswerForm({ state, round, you }: { state: GameState; round: RoundState
       <ErrorText message={error} />
 
       <div className="sticky-footer">
-        <button className="btn btn-primary btn-big" disabled={!canStop} onClick={stop}>
-          {round.stoppedBy ? 'Clock stopped!' : 'Stop the clock'}
+        <button className="bell-btn" disabled={!canStop} onClick={stop}>
+          <span className="bell-face">{round.stoppedBy ? '🚏 Stopping…' : 'BUSSTOP!'}</span>
         </button>
         {!allValid && !timeUp && (
-          <p className="hint">Fill in every answer to unlock Stop the clock</p>
+          <p className="hint">
+            {filled}/{round.categories.length} done – fill them all to press BUSSTOP!
+          </p>
         )}
       </div>
     </div>
