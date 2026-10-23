@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { REVEAL_MS, SUBMIT_GRACE_MS, type JoinedRoom } from '@letter-race/core';
+import { REVEAL_MS, SUBMIT_GRACE_MS, type JoinedRoom } from '@busstop/core';
 import { createApp, type App } from './app';
 import { TestClient } from './testClient';
 

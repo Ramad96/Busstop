@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { GameState, Settings } from '@letter-race/core';
+import type { GameState, Settings } from '@busstop/core';
 import { DotMatrix } from '../components/DotMatrix';
 import { ErrorText } from '../components/ErrorText';
 import { PlayerList } from '../components/PlayerList';

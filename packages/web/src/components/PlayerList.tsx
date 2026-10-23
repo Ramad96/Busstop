@@ -1,4 +1,4 @@
-import type { GameState } from '@letter-race/core';
+import type { GameState } from '@busstop/core';
 import { Avatar } from './Avatar';
 
 export function PlayerList({ game, you }: { game: GameState; you: string | null }) {

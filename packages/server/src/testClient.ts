@@ -5,7 +5,7 @@ import type {
   GameState,
   ServerToClientEvents,
   StateMessage,
-} from '@letter-race/core';
+} from '@busstop/core';
 
 export type ClientSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 

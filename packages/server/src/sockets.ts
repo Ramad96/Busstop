@@ -10,7 +10,7 @@ import {
   type GameState,
   type PlayerId,
   type ServerToClientEvents,
-} from '@letter-race/core';
+} from '@busstop/core';
 import { RoomError, type PlayerAction, type RoomManager } from './rooms';
 
 interface SocketData {

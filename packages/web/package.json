@@ -1,5 +1,5 @@
 {
-  "name": "@letter-race/web",
+  "name": "@busstop/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -20,7 +20,7 @@
     "vitest": "^5.0.3"
   },
   "dependencies": {
-    "@letter-race/core": "workspace:^",
+    "@busstop/core": "workspace:^",
     "canvas-confetti": "^1.9.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

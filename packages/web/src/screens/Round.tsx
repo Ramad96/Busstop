@@ -8,7 +8,7 @@ import {
   type Answers,
   type GameState,
   type Round as RoundState,
-} from '@letter-race/core';
+} from '@busstop/core';
 import { Countdown } from '../components/Countdown';
 import { ErrorText } from '../components/ErrorText';
 import { LetterReveal } from '../components/LetterReveal';

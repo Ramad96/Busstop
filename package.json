@@ -1,10 +1,10 @@
 {
-  "name": "letter-race",
+  "name": "busstop",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "dev": "pnpm --parallel --filter @letter-race/server --filter @letter-race/web dev",
+    "dev": "pnpm --parallel --filter @busstop/server --filter @busstop/web dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { allowedLetters, REVEAL_MS, type Settings } from '@letter-race/core';
+import { allowedLetters, REVEAL_MS, type Settings } from '@busstop/core';
 import { sfx } from '../fx/sound';
 import { useServerNow } from '../hooks';
 import { DotMatrix } from './DotMatrix';

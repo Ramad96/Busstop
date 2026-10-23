@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { CHARACTER_IDS, MAX_NAME_LENGTH, type CharacterId } from '@letter-race/core';
+import { CHARACTER_IDS, MAX_NAME_LENGTH, type CharacterId } from '@busstop/core';
 import { CharacterPicker } from '../components/CharacterPicker';
 import { ErrorText } from '../components/ErrorText';
 import { game } from '../net/socket';

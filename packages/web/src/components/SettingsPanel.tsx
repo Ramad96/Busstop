@@ -5,7 +5,7 @@ import {
   MAX_CATEGORY_LENGTH,
   randomCategories,
   type Settings,
-} from '@letter-race/core';
+} from '@busstop/core';
 import { formatSeconds } from '../util';
 
 const TIMER_OPTIONS = [60, 90, 120, 180];

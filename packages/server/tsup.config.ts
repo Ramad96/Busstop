@@ -7,5 +7,5 @@ export default defineConfig({
   target: 'node20',
   clean: true,
   // Bundle the workspace core package (it ships TypeScript source).
-  noExternal: ['@letter-race/core'],
+  noExternal: ['@busstop/core'],
 });

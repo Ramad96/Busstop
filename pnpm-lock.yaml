@@ -47,7 +47,7 @@ importers:
 
   packages/server:
     dependencies:
-      '@letter-race/core':
+      '@busstop/core':
         specifier: workspace:^
         version: link:../core
       socket.io:
@@ -75,7 +75,7 @@ importers:
 
   packages/web:
     dependencies:
-      '@letter-race/core':
+      '@busstop/core':
         specifier: workspace:^
         version: link:../core
       canvas-confetti:

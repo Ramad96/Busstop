@@ -1,4 +1,4 @@
-import { CHARACTERS, type CharacterId } from '@letter-race/core';
+import { CHARACTERS, type CharacterId } from '@busstop/core';
 
 export function CharacterPicker({
   value,

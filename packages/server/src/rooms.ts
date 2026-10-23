@@ -11,7 +11,7 @@ import {
   type GameState,
   type PlayerId,
   type RandomFn,
-} from '@letter-race/core';
+} from '@busstop/core';
 
 export class RoomError extends Error {
   constructor(

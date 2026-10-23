@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { REVEAL_MS, SUBMIT_GRACE_MS } from '@letter-race/core';
+import { REVEAL_MS, SUBMIT_GRACE_MS } from '@busstop/core';
 import { EMPTY_ROOM_TTL_MS, RoomManager } from './rooms';
 
 let clock = 0;

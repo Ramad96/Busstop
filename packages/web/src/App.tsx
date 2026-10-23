@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { HowToPlay } from './components/HowToPlay';
-import { normaliseRoomCode } from '@letter-race/core';
+import { normaliseRoomCode } from '@busstop/core';
 import { setMuted, useMuted } from './fx/sound';
 import { useGame } from './net/socket';
 import { Final } from './screens/Final';
