@@ -348,20 +348,6 @@ describe('host, leaving and reconnecting', () => {
   });
 });
 
-describe('endGame', () => {
-  it('returns to the lobby and resets scores', () => {
-    let s = playing();
-    s = reduce(s, { type: 'updateAnswers', playerId: 'h', answers: { Food: 'Apple' } });
-    s = reduce(s, { type: 'tick', now: s.round!.endsAt + SUBMIT_GRACE_MS });
-    expectError(() => reduce(s, { type: 'endGame', playerId: 'p2' }), 'not_host');
-    s = reduce(s, { type: 'endGame', playerId: 'h' });
-    expect(s.phase).toBe('lobby');
-    expect(s.round).toBeNull();
-    expect(s.totals).toEqual({ h: 0, p2: 0, p3: 0 });
-    expect(s.usedLetters).toEqual([]);
-  });
-});
-
 describe('purity', () => {
   it('does not mutate the previous state', () => {
     const before = lobby();
@@ -372,61 +358,208 @@ describe('purity', () => {
   });
 });
 
-describe('vote to reject', () => {
-  /** Round with letter A: Hana "Axyz" and Bob "Apple" for Food, Cat blank. */
-  function results(): GameState {
-    let s = playing();
-    s = reduce(s, { type: 'updateAnswers', playerId: 'h', answers: { Food: 'Axyz' } });
-    s = reduce(s, { type: 'updateAnswers', playerId: 'p2', answers: { Food: 'Apple' } });
-    return reduce(s, { type: 'tick', now: s.round!.endsAt + SUBMIT_GRACE_MS });
+/** Plays one round with letter A (random 0) to results, with the given Food answers. */
+function playRound(s: GameState, food: Record<string, string>, now = T0): GameState {
+  s = reduce(s, { type: 'start', playerId: s.hostId!, now, random: seq(0) });
+  s = reduce(s, { type: 'tick', now: now + REVEAL_MS });
+  for (const [id, answer] of Object.entries(food)) {
+    s = reduce(s, { type: 'updateAnswers', playerId: id, answers: { Food: answer } });
   }
-  const vote = (s: GameState, voter: string, target = 'h', category = 'Food') =>
-    reduce(s, { type: 'voteReject', playerId: voter, targetId: target, category });
+  return reduce(s, { type: 'tick', now: s.round!.endsAt + SUBMIT_GRACE_MS });
+}
 
-  it('one vote out of two others is not enough', () => {
-    const s = vote(results(), 'p2');
-    expect(s.round!.votes).toHaveLength(1);
+describe('rounds and the final scoreboard', () => {
+  it('defaults to 3 rounds and validates the setting', () => {
+    expect(lobby().settings.totalRounds).toBe(3);
+    expectError(
+      () =>
+        reduce(lobby(), { type: 'updateSettings', playerId: 'h', settings: { totalRounds: 0 } }),
+      'invalid_settings',
+    );
+    expectError(
+      () =>
+        reduce(lobby(), { type: 'updateSettings', playerId: 'h', settings: { totalRounds: 2.5 } }),
+      'invalid_settings',
+    );
+  });
+
+  it('records each round in the history, including who called BUSSTOP!', () => {
+    let s = reduce(lobby(), { type: 'start', playerId: 'h', now: T0, random: seq(0) });
+    s = reduce(s, { type: 'tick', now: T0 + REVEAL_MS });
+    s = reduce(s, {
+      type: 'stopClock',
+      playerId: 'p2',
+      answers: { Food: 'Apple', Country: 'Angola' },
+      now: T0 + REVEAL_MS + 1000,
+    });
+    s = reduce(s, { type: 'tick', now: s.round!.endsAt + SUBMIT_GRACE_MS });
+    expect(s.history).toEqual([
+      { number: 1, letter: 'A', stoppedBy: 'p2', roundTotals: { h: 0, p2: 20, p3: 0 } },
+    ]);
+  });
+
+  it('stops after the last round, then End game shows the final scoreboard', () => {
+    let s = reduce(lobby(), {
+      type: 'updateSettings',
+      playerId: 'h',
+      settings: { totalRounds: 2 },
+    });
+    s = playRound(s, { h: 'Apple' });
+    s = playRound(s, { h: 'Bread' }, T0 + 200_000);
+    expect(s.round!.number).toBe(2);
+    expectError(
+      () => reduce(s, { type: 'start', playerId: 'h', now: T0 + 400_000, random: seq(0) }),
+      'last_round',
+    );
+    expectError(() => reduce(s, { type: 'endGame', playerId: 'p2' }), 'not_host');
+    s = reduce(s, { type: 'endGame', playerId: 'h' });
+    expect(s.phase).toBe('final');
+    expect(s.history.map((h) => h.letter)).toEqual(['A', 'B']);
+    expect(s.totals.h).toBe(20);
+  });
+
+  it('End game part-way through also goes to the final scoreboard', () => {
+    let s = playRound(lobby(), { h: 'Apple' });
+    s = reduce(s, { type: 'endGame', playerId: 'h' });
+    expect(s.phase).toBe('final');
+    expect(s.totals.h).toBe(10);
+  });
+
+  it("can't lower the rounds below what's been played", () => {
+    let s = reduce(lobby(), {
+      type: 'updateSettings',
+      playerId: 'h',
+      settings: { totalRounds: 3 },
+    });
+    s = playRound(s, { h: 'Apple' });
+    s = playRound(s, { h: 'Bread' }, T0 + 200_000);
+    expectError(
+      () => reduce(s, { type: 'updateSettings', playerId: 'h', settings: { totalRounds: 1 } }),
+      'invalid_settings',
+    );
+    expect(
+      reduce(s, { type: 'updateSettings', playerId: 'h', settings: { totalRounds: 2 } }).settings
+        .totalRounds,
+    ).toBe(2);
+  });
+
+  it('New game from the final scoreboard resets everything', () => {
+    let s = playRound(lobby(), { h: 'Apple' });
+    s = reduce(s, { type: 'endGame', playerId: 'h' });
+    expectError(() => reduce(s, { type: 'newGame', playerId: 'p2' }), 'not_host');
+    s = reduce(s, { type: 'newGame', playerId: 'h' });
+    expect(s.phase).toBe('lobby');
+    expect(s.round).toBeNull();
+    expect(s.history).toEqual([]);
+    expect(s.totals).toEqual({ h: 0, p2: 0, p3: 0 });
+    expect(s.usedLetters).toEqual([]);
+    expect(reduce(s, { type: 'start', playerId: 'h', now: T0, random: seq(0) }).round!.number).toBe(
+      1,
+    );
+  });
+
+  it('players joining at the final scoreboard play the next game', () => {
+    let s = playRound(lobby(), { h: 'Apple' });
+    s = reduce(s, { type: 'endGame', playerId: 'h' });
+    s = reduce(s, { type: 'join', playerId: 'late', name: 'Late', character: 'fox' });
+    expect(s.players.find((p) => p.id === 'late')?.spectating).toBe(false);
+  });
+});
+
+describe('challenge the word', () => {
+  /** Hana "Axyz", Bob "Apple", Cat blank. */
+  const results = () => playRound(lobby(), { h: 'Axyz', p2: 'Apple' });
+  const challenge = (s: GameState, by: string, target = 'h', category = 'Food') =>
+    reduce(s, { type: 'challenge', playerId: by, targetId: target, category });
+  const vote = (s: GameState, by: string, verdict: 'valid' | 'invalid', target = 'h') =>
+    reduce(s, { type: 'voteChallenge', playerId: by, targetId: target, category: 'Food', verdict });
+
+  it('opens a challenge with the challenger voting "invalid"', () => {
+    const s = challenge(results(), 'p2');
+    expect(s.round!.challenges).toEqual([
+      {
+        targetId: 'h',
+        category: 'Food',
+        challengerId: 'p2',
+        votes: { p2: 'invalid' },
+        outcome: 'pending',
+      },
+    ]);
     expect(s.round!.result!.scores.h.Food.points).toBe(10);
   });
 
-  it('a majority of the other players rejects the answer and fixes totals', () => {
-    let s = results();
-    expect(s.totals.h).toBe(10);
-    s = vote(vote(s, 'p2'), 'p3');
+  it('a majority of the other players rejects the answer, fixing totals and history', () => {
+    let s = challenge(results(), 'p2');
+    s = vote(s, 'p3', 'invalid');
+    expect(s.round!.challenges[0].outcome).toBe('rejected');
     expect(s.round!.result!.scores.h.Food).toMatchObject({ points: 0, rejected: true });
-    expect(s.round!.result!.roundTotals.h).toBe(0);
     expect(s.totals.h).toBe(0);
+    expect(s.history[0].roundTotals.h).toBe(0);
+  });
+
+  it('a tie goes to the answer', () => {
+    const s = vote(challenge(results(), 'p2'), 'p3', 'valid');
+    expect(s.round!.challenges[0].outcome).toBe('stands');
+    expect(s.totals.h).toBe(10);
+  });
+
+  it('the challenger loses nothing when the answer stands', () => {
+    const s = vote(challenge(results(), 'p2'), 'p3', 'valid');
     expect(s.totals.p2).toBe(10);
   });
 
-  it('voting again takes the vote back and restores points', () => {
-    let s = vote(vote(results(), 'p2'), 'p3');
-    s = vote(s, 'p3');
-    expect(s.round!.votes).toHaveLength(1);
+  it('settled challenges can no longer be voted on', () => {
+    const s = vote(challenge(results(), 'p2'), 'p3', 'valid');
+    expectError(() => vote(s, 'p2', 'invalid'), 'invalid_challenge');
+  });
+
+  it('voters can change their mind while it is open', () => {
+    let s = lobby();
+    s = reduce(s, { type: 'join', playerId: 'p4', name: 'Dan', character: 'fox' });
+    s = reduce(s, { type: 'join', playerId: 'p5', name: 'Eve', character: 'fox' });
+    s = playRound(s, { h: 'Axyz' });
+    // 4 voters: p2 (challenger, invalid), p3, p4, p5.
+    s = challenge(s, 'p2');
+    s = vote(s, 'p3', 'valid');
+    expect(s.round!.challenges[0].outcome).toBe('pending');
+    s = vote(s, 'p3', 'invalid');
+    expect(s.round!.challenges[0].outcome).toBe('pending');
+    s = vote(s, 'p4', 'invalid');
+    expect(s.round!.challenges[0].outcome).toBe('rejected');
+  });
+
+  it('only counts connected players, and settles when someone drops out', () => {
+    let s = challenge(results(), 'p2');
+    s = reduce(s, { type: 'disconnect', playerId: 'p3' });
+    // Now p2 is the only voter, and has voted invalid.
+    expect(s.round!.challenges[0].outcome).toBe('rejected');
+  });
+
+  it("can't challenge your own, blank, wrong-letter or already-challenged answers", () => {
+    let s = playRound(lobby(), { h: 'Axyz', p2: 'Banana' });
+    expectError(() => challenge(s, 'h', 'h'), 'invalid_challenge');
+    expectError(() => challenge(s, 'h', 'p3'), 'invalid_challenge');
+    expectError(() => challenge(s, 'h', 'p2'), 'invalid_challenge');
+    expectError(() => challenge(s, 'h', 'h', 'Nope'), 'invalid_challenge');
+    s = challenge(s, 'p2');
+    expectError(() => challenge(s, 'p3'), 'invalid_challenge');
+    expectError(() => vote(s, 'h', 'valid'), 'invalid_challenge');
+  });
+
+  it('only works on the results screen', () => {
+    expectError(() => challenge(playing(), 'p2'), 'wrong_phase');
+  });
+
+  it('open challenges close (answer stands) when the game ends', () => {
+    let s = challenge(results(), 'p2');
+    s = reduce(s, { type: 'endGame', playerId: 'h' });
+    expect(s.round!.challenges[0].outcome).toBe('stands');
     expect(s.totals.h).toBe(10);
-    expect(s.round!.result!.scores.h.Food.rejected).toBe(false);
   });
 
-  it('only counts connected players when deciding', () => {
-    let s = vote(results(), 'p3');
-    expect(s.round!.result!.scores.h.Food.rejected).toBe(false);
-    s = reduce(s, { type: 'disconnect', playerId: 'p2' });
-    // Recalculated on the next vote: now p3 is the only other voter, so 1 vote is a majority.
-    s = vote(vote(s, 'p3'), 'p3');
-    expect(s.round!.result!.scores.h.Food.rejected).toBe(true);
-  });
-
-  it("can't vote on your own, blank or unknown answers, or outside results", () => {
-    const s = results();
-    expectError(() => vote(s, 'h', 'h'), 'invalid_vote');
-    expectError(() => vote(s, 'h', 'p3'), 'invalid_vote');
-    expectError(() => vote(s, 'h', 'p2', 'Nope'), 'invalid_vote');
-    expectError(() => vote(playing(), 'p2'), 'wrong_phase');
-  });
-
-  it('votes reset in the next round', () => {
-    let s = vote(results(), 'p2');
+  it('challenges reset in the next round', () => {
+    let s = challenge(results(), 'p2');
     s = reduce(s, { type: 'start', playerId: 'h', now: T0 + 200_000, random: seq(0) });
-    expect(s.round!.votes).toEqual([]);
+    expect(s.round!.challenges).toEqual([]);
   });
 });

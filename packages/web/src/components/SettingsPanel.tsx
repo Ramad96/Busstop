@@ -1,13 +1,15 @@
 import { useRef, useState, type FormEvent } from 'react';
 import {
-  DEFAULT_CATEGORIES,
+  CATEGORY_BANK,
   MAX_CATEGORIES,
   MAX_CATEGORY_LENGTH,
+  randomCategories,
   type Settings,
 } from '@letter-race/core';
 import { formatSeconds } from '../util';
 
 const TIMER_OPTIONS = [60, 90, 120, 180];
+const ROUND_OPTIONS = [3, 5, 8, 10];
 
 const sameText = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
@@ -18,24 +20,16 @@ export function SettingsPanel({
   settings: Settings;
   onChange: (settings: Partial<Settings>) => Promise<unknown> | void;
 }) {
-  // Custom categories stay in the list even while switched off.
-  const [custom, setCustom] = useState(() =>
-    settings.categories.filter((c) => !DEFAULT_CATEGORIES.includes(c)),
-  );
   const [draft, setDraft] = useState('');
   // While category changes are in flight, show (and build on) what we asked for, so quick
   // taps on a slow connection don't undo each other.
   const [requested, setRequested] = useState<string[] | null>(null);
   const inFlight = useRef(0);
-  const enabled = new Set(requested ?? settings.categories);
-  const allCategories = [
-    ...DEFAULT_CATEGORIES,
-    ...custom,
-    ...settings.categories.filter((c) => !DEFAULT_CATEGORIES.includes(c) && !custom.includes(c)),
-  ];
+  const selected = requested ?? settings.categories;
+  const available = CATEGORY_BANK.filter((c) => !selected.some((s) => sameText(s, c)));
+  const full = selected.length >= MAX_CATEGORIES;
 
-  async function setEnabled(next: Set<string>, list = allCategories) {
-    const categories = list.filter((c) => next.has(c));
+  async function setCategories(categories: string[]) {
     setRequested(categories);
     inFlight.current++;
     await onChange({ categories });
@@ -43,11 +37,13 @@ export function SettingsPanel({
     if (inFlight.current === 0) setRequested(null);
   }
 
-  function toggleCategory(category: string) {
-    const next = new Set(enabled);
-    if (next.has(category)) next.delete(category);
-    else next.add(category);
-    void setEnabled(next);
+  function add(category: string) {
+    if (full || selected.some((s) => sameText(s, category))) return;
+    void setCategories([...selected, category]);
+  }
+
+  function remove(category: string) {
+    void setCategories(selected.filter((c) => c !== category));
   }
 
   function addCustom(e: FormEvent) {
@@ -55,28 +51,32 @@ export function SettingsPanel({
     const name = draft.trim().replace(/\s+/g, ' ');
     if (!name) return;
     setDraft('');
-    const existing = allCategories.find((c) => sameText(c, name));
-    if (existing) {
-      void setEnabled(new Set([...enabled, existing]));
-      return;
-    }
-    const list = [...allCategories, name];
-    setCustom((c) => [...c, name]);
-    void setEnabled(new Set([...enabled, name]), list);
-  }
-
-  function removeCustom(category: string) {
-    setCustom((c) => c.filter((x) => x !== category));
-    const next = new Set(enabled);
-    next.delete(category);
-    void setEnabled(next);
+    add(CATEGORY_BANK.find((c) => sameText(c, name)) ?? name);
   }
 
   return (
-    <section className="settings">
-      <h3>Settings</h3>
+    <section className="settings panel">
+      <h3 className="panel-title">Timetable</h3>
+
       <div className="field">
-        <span>Timer</span>
+        <span className="field-label">Rounds</span>
+        <div className="chips">
+          {ROUND_OPTIONS.map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`chip ${settings.totalRounds === n ? 'on' : ''}`}
+              aria-pressed={settings.totalRounds === n}
+              onClick={() => onChange({ totalRounds: n })}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="field">
+        <span className="field-label">Time per round</span>
         <div className="chips">
           {TIMER_OPTIONS.map((s) => (
             <button
@@ -91,51 +91,67 @@ export function SettingsPanel({
           ))}
         </div>
       </div>
+
       <div className="field">
-        <span>
-          Categories <small className="muted">({enabled.size} on)</small>
+        <span className="field-label">
+          Categories{' '}
+          <small className="muted">
+            {selected.length}/{MAX_CATEGORIES}
+          </small>
         </span>
         <div className="chips">
-          {allCategories.map((c) => (
-            <span key={c} className="chip-wrap">
-              <button
-                type="button"
-                className={`chip ${enabled.has(c) ? 'on' : ''}`}
-                aria-pressed={enabled.has(c)}
-                onClick={() => toggleCategory(c)}
-              >
-                {c}
-              </button>
-              {!DEFAULT_CATEGORIES.includes(c) && (
-                <button
-                  type="button"
-                  className="chip-remove"
-                  aria-label={`Remove ${c}`}
-                  onClick={() => removeCustom(c)}
-                >
-                  ×
-                </button>
-              )}
-            </span>
+          {selected.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="chip on removable"
+              onClick={() => remove(c)}
+              disabled={selected.length === 1}
+              aria-label={`Remove ${c}`}
+            >
+              {c} <span aria-hidden>×</span>
+            </button>
+          ))}
+        </div>
+        <div className="category-tools">
+          <span className="field-sublabel">Add more</span>
+          <button
+            type="button"
+            className="btn btn-small btn-ghost"
+            onClick={() => void setCategories(randomCategories(Math.random))}
+          >
+            🎲 Random 6
+          </button>
+        </div>
+        <div className="chips">
+          {available.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className="chip addable"
+              onClick={() => add(c)}
+              disabled={full}
+              aria-label={`Add ${c}`}
+            >
+              <span aria-hidden>+</span> {c}
+            </button>
           ))}
         </div>
         <form className="add-category" onSubmit={addCustom}>
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Add your own, e.g. Animal"
+            placeholder="Your own, e.g. Superhero"
             maxLength={MAX_CATEGORY_LENGTH}
             aria-label="New category"
             enterKeyHint="done"
           />
-          <button
-            className="btn btn-small"
-            disabled={!draft.trim() || enabled.size >= MAX_CATEGORIES}
-          >
+          <button className="btn btn-small" disabled={!draft.trim() || full}>
             Add
           </button>
         </form>
       </div>
+
       <label className="toggle">
         <input
           type="checkbox"

@@ -73,7 +73,7 @@ export function Lobby({ state, you }: { state: GameState; you: string | null }) 
         <section className="settings-summary">
           <h3>Settings</h3>
           <p>
-            ⏱ {formatSeconds(state.settings.roundSeconds)} ·{' '}
+            {state.settings.totalRounds} rounds · ⏱ {formatSeconds(state.settings.roundSeconds)} ·{' '}
             {state.settings.includeHardLetters ? 'All letters' : 'No hard letters'}
           </p>
           <div className="chips">

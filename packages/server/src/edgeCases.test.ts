@@ -123,7 +123,7 @@ describe('edge cases', () => {
   });
 });
 
-describe('vote to reject', () => {
+describe('challenge the word', () => {
   it('rejects an answer when the other players vote it out', async () => {
     const { ann, ben } = await twoPlayers();
     await ann.call('game:start');
@@ -132,15 +132,44 @@ describe('vote to reject', () => {
     await ann.call('answers:update', { answers: { Food: `${s.round!.letter}xyz` } });
     advance(10 * 60_000 + SUBMIT_GRACE_MS);
     await ben.waitFor((st) => st.phase === 'results');
-    expect(await ann.call('answer:vote', { targetId: ann.id, category: 'Food' })).toMatchObject({
-      ok: false,
-      error: { code: 'invalid_vote' },
-    });
-    expect(await ben.call('answer:vote', { targetId: ann.id, category: 'Food' })).toEqual({
+    expect(
+      await ann.call('answer:challenge', { targetId: ann.id, category: 'Food' }),
+    ).toMatchObject({ ok: false, error: { code: 'invalid_challenge' } });
+    expect(await ben.call('answer:challenge', { targetId: ann.id, category: 'Food' })).toEqual({
       ok: true,
     });
-    const after = await ann.waitFor((st) => st.round!.votes.length === 1);
-    expect(after.round!.result!.scores[ann.id].Food.rejected).toBe(true);
+    // With two players, the challenger is the only voter, so it's settled straight away.
+    const after = await ann.waitFor((st) => st.round!.challenges.length === 1);
+    expect(after.round!.challenges[0]).toMatchObject({ challengerId: ben.id, outcome: 'rejected' });
     expect(after.totals[ann.id]).toBe(0);
+    expect(
+      await ben.call('challenge:vote', {
+        targetId: ann.id,
+        category: 'Food',
+        verdict: 'maybe',
+      }),
+    ).toMatchObject({ ok: false, error: { code: 'bad_request' } });
+  });
+});
+
+describe('rounds and final scoreboard', () => {
+  it('plays the set number of rounds, then shows the final scoreboard and starts afresh', async () => {
+    const { ann, ben } = await twoPlayers();
+    await ann.call('settings:update', { settings: { totalRounds: 1 } });
+    await ben.waitFor((st) => st.settings.totalRounds === 1);
+    await ann.call('game:start');
+    advance(REVEAL_MS + 10 * 60_000 + SUBMIT_GRACE_MS);
+    await ben.waitFor((st) => st.phase === 'results');
+    expect(await ann.call('game:start')).toMatchObject({
+      ok: false,
+      error: { code: 'last_round' },
+    });
+    expect(await ann.call('game:end')).toEqual({ ok: true });
+    const final = await ben.waitFor((st) => st.phase === 'final');
+    expect(final.history).toHaveLength(1);
+    expect(await ben.call('game:new')).toMatchObject({ ok: false, error: { code: 'not_host' } });
+    expect(await ann.call('game:new')).toEqual({ ok: true });
+    const fresh = await ben.waitFor((st) => st.phase === 'lobby');
+    expect(fresh.history).toEqual([]);
   });
 });

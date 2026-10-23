@@ -3,7 +3,7 @@ export type PlayerId = string;
 /** A function returning a number in [0, 1), like Math.random. Passed in so tests are repeatable. */
 export type RandomFn = () => number;
 
-export type GamePhase = 'lobby' | 'reveal' | 'playing' | 'scoring' | 'results';
+export type GamePhase = 'lobby' | 'reveal' | 'playing' | 'scoring' | 'results' | 'final';
 
 export type CharacterId =
   'fox' | 'frog' | 'panda' | 'unicorn' | 'octopus' | 'tiger' | 'penguin' | 'alien';
@@ -23,6 +23,8 @@ export interface Settings {
   categories: string[];
   /** Include Q, U, V, X, Y, Z in the letter hat. */
   includeHardLetters: boolean;
+  /** Rounds in a game; after the last one the host shows the final scoreboard. */
+  totalRounds: number;
 }
 
 /** One player's answers, keyed by category name. */
@@ -63,14 +65,30 @@ export interface Round {
   /** Players who have sent their final (locked) answers. */
   submitted: PlayerId[];
   result: RoundResult | null;
-  /** Votes to reject answers, cast on the results screen. */
-  votes: Vote[];
+  /** Answers challenged on the results screen. */
+  challenges: Challenge[];
 }
 
-export interface Vote {
-  voterId: PlayerId;
+export type ChallengeVerdict = 'valid' | 'invalid';
+
+export interface Challenge {
+  /** Whose answer is challenged. */
   targetId: PlayerId;
   category: string;
+  challengerId: PlayerId;
+  /** Each voter's verdict. The challenger votes 'invalid' automatically. */
+  votes: Record<PlayerId, ChallengeVerdict>;
+  /** 'stands' = answer keeps its points; 'rejected' = answer scores 0. */
+  outcome: 'pending' | 'stands' | 'rejected';
+}
+
+/** One finished round, for the final scoreboard. */
+export interface RoundSummary {
+  number: number;
+  letter: string;
+  /** Who called BUSSTOP!, if anyone. */
+  stoppedBy: PlayerId | null;
+  roundTotals: Record<PlayerId, number>;
 }
 
 export interface GameState {
@@ -82,4 +100,6 @@ export interface GameState {
   round: Round | null;
   totals: Record<PlayerId, number>;
   usedLetters: string[];
+  /** Finished rounds this game, oldest first. */
+  history: RoundSummary[];
 }

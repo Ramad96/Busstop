@@ -1,4 +1,5 @@
 import { allAnswersValid, sanitiseAnswers } from './answers';
+import { decideChallenge, findChallenge, rejectionsFrom } from './challenges';
 import { applyStopClock } from './clock';
 import {
   CHARACTER_IDS,
@@ -8,14 +9,18 @@ import {
   MAX_NAME_LENGTH,
   MAX_PLAYERS,
   MAX_ROUND_SECONDS,
+  MAX_ROUNDS,
   MIN_ROUND_SECONDS,
+  MIN_ROUNDS,
   REVEAL_MS,
   SUBMIT_GRACE_MS,
 } from './constants';
 import { pickLetter } from './letters';
-import { scoreRound, type Rejection } from './scoring';
+import { scoreRound } from './scoring';
 import type {
   Answers,
+  Challenge,
+  ChallengeVerdict,
   CharacterId,
   GameState,
   Player,
@@ -23,7 +28,6 @@ import type {
   RandomFn,
   Round,
   Settings,
-  Vote,
 } from './types';
 
 export type GameErrorCode =
@@ -39,7 +43,8 @@ export type GameErrorCode =
   | 'answers_incomplete'
   | 'already_submitted'
   | 'not_participant'
-  | 'invalid_vote';
+  | 'invalid_challenge'
+  | 'last_round';
 
 export class GameError extends Error {
   constructor(
@@ -63,7 +68,15 @@ export type Action =
   | { type: 'submitAnswers'; playerId: PlayerId; answers: Answers }
   | { type: 'stopClock'; playerId: PlayerId; answers: Answers; now: number }
   | { type: 'endGame'; playerId: PlayerId }
-  | { type: 'voteReject'; playerId: PlayerId; targetId: PlayerId; category: string };
+  | { type: 'newGame'; playerId: PlayerId }
+  | { type: 'challenge'; playerId: PlayerId; targetId: PlayerId; category: string }
+  | {
+      type: 'voteChallenge';
+      playerId: PlayerId;
+      targetId: PlayerId;
+      category: string;
+      verdict: ChallengeVerdict;
+    };
 
 export interface NewPlayer {
   id: PlayerId;
@@ -85,6 +98,7 @@ export function createGame(
     round: null,
     totals: {},
     usedLetters: [],
+    history: [],
   };
   return reduce(empty, {
     type: 'join',
@@ -103,7 +117,7 @@ export function validateName(name: string): string {
 }
 
 export function validateSettings(settings: Settings): Settings {
-  const { roundSeconds, includeHardLetters } = settings;
+  const { roundSeconds, includeHardLetters, totalRounds } = settings;
   if (
     typeof roundSeconds !== 'number' ||
     !Number.isInteger(roundSeconds) ||
@@ -114,6 +128,14 @@ export function validateSettings(settings: Settings): Settings {
       'invalid_settings',
       `Timer must be ${MIN_ROUND_SECONDS}–${MAX_ROUND_SECONDS} seconds`,
     );
+  }
+  if (
+    typeof totalRounds !== 'number' ||
+    !Number.isInteger(totalRounds) ||
+    totalRounds < MIN_ROUNDS ||
+    totalRounds > MAX_ROUNDS
+  ) {
+    throw new GameError('invalid_settings', `Rounds must be ${MIN_ROUNDS}–${MAX_ROUNDS}`);
   }
   if (typeof includeHardLetters !== 'boolean') {
     throw new GameError('invalid_settings', 'includeHardLetters must be true or false');
@@ -138,7 +160,7 @@ export function validateSettings(settings: Settings): Settings {
   if (categories.length === 0 || categories.length > MAX_CATEGORIES) {
     throw new GameError('invalid_settings', `Pick 1–${MAX_CATEGORIES} categories`);
   }
-  return { roundSeconds, includeHardLetters, categories };
+  return { roundSeconds, includeHardLetters, categories, totalRounds };
 }
 
 export function getPlayer(state: GameState, playerId: PlayerId): Player | undefined {
@@ -188,34 +210,7 @@ function updatePlayer(state: GameState, playerId: PlayerId, patch: Partial<Playe
   };
 }
 
-/**
- * An answer is rejected when more than half of the other connected participants vote
- * against it.
- */
-export function rejectedAnswers(state: GameState): Rejection[] {
-  const round = state.round;
-  if (!round) return [];
-  const voters = round.participants.filter((id) => getPlayer(state, id)?.connected);
-  const tally = new Map<string, { rejection: Rejection; count: number }>();
-  for (const v of round.votes) {
-    if (!voters.includes(v.voterId)) continue;
-    const key = `${v.targetId}\u0000${v.category}`;
-    const entry = tally.get(key) ?? {
-      rejection: { playerId: v.targetId, category: v.category },
-      count: 0,
-    };
-    entry.count++;
-    tally.set(key, entry);
-  }
-  return [...tally.values()]
-    .filter(({ rejection, count }) => {
-      const eligible = voters.filter((id) => id !== rejection.playerId).length;
-      return count > eligible / 2;
-    })
-    .map(({ rejection }) => rejection);
-}
-
-/** Re-scores the finished round (after votes change) and fixes up totals. */
+/** Re-scores the finished round (after challenges change) and fixes up totals and history. */
 function rescore(state: GameState): GameState {
   const round = requireRound(state);
   const old = round.result;
@@ -223,13 +218,41 @@ function rescore(state: GameState): GameState {
   const allAnswers: Record<PlayerId, Answers> = {};
   for (const id of round.participants) allAnswers[id] = round.answers[id] ?? {};
   const result = scoreRound(allAnswers, round.categories, round.letter, {
-    rejected: rejectedAnswers(state),
+    rejected: rejectionsFrom(round.challenges),
   });
   const totals = { ...state.totals };
   for (const id of Object.keys(totals)) {
     totals[id] += (result.roundTotals[id] ?? 0) - (old.roundTotals[id] ?? 0);
   }
-  return { ...state, totals, round: { ...round, result } };
+  const history = state.history.map((h) =>
+    h.number === round.number ? { ...h, roundTotals: result.roundTotals } : h,
+  );
+  return { ...state, totals, history, round: { ...round, result } };
+}
+
+/** Settles any pending challenges that are now decided, re-scoring if one was rejected. */
+function resolveChallenges(state: GameState): GameState {
+  const round = state.round;
+  if (state.phase !== 'results' || !round || round.challenges.length === 0) return state;
+  let changed = false;
+  const challenges = round.challenges.map((c) => {
+    const outcome = decideChallenge(state, c);
+    if (outcome === c.outcome) return c;
+    changed = true;
+    return { ...c, outcome };
+  });
+  if (!changed) return state;
+  return rescore({ ...state, round: { ...round, challenges } });
+}
+
+/** Challenges still open when play moves on: the answer stands. */
+function closeChallenges(round: Round): Round {
+  return {
+    ...round,
+    challenges: round.challenges.map((c) =>
+      c.outcome === 'pending' ? { ...c, outcome: 'stands' } : c,
+    ),
+  };
 }
 
 function finishRound(state: GameState): GameState {
@@ -241,7 +264,16 @@ function finishRound(state: GameState): GameState {
   for (const [id, points] of Object.entries(result.roundTotals)) {
     totals[id] = (totals[id] ?? 0) + points;
   }
-  return { ...state, phase: 'results', totals, round: { ...round, result } };
+  const history = [
+    ...state.history,
+    {
+      number: round.number,
+      letter: round.letter,
+      stoppedBy: round.stoppedBy,
+      roundTotals: result.roundTotals,
+    },
+  ];
+  return { ...state, phase: 'results', totals, history, round: { ...round, result } };
 }
 
 /** In scoring, once every connected participant has sent final answers, score straight away. */
@@ -284,7 +316,7 @@ export function reduce(state: GameState, action: Action): GameState {
       if (!CHARACTER_IDS.includes(action.character)) {
         throw new GameError('character_invalid', 'Pick a character');
       }
-      const spectating = state.phase !== 'lobby' && state.phase !== 'results';
+      const spectating = !['lobby', 'results', 'final'].includes(state.phase);
       const player: Player = {
         id: action.playerId,
         name,
@@ -321,13 +353,13 @@ export function reduce(state: GameState, action: Action): GameState {
         round,
         hostId: state.hostId === action.playerId ? null : state.hostId,
       };
-      return maybeFinishScoring(ensureHost(next));
+      return resolveChallenges(maybeFinishScoring(ensureHost(next)));
     }
 
     case 'disconnect': {
       requirePlayer(state, action.playerId);
       const next = updatePlayer(state, action.playerId, { connected: false });
-      return maybeFinishScoring(ensureHost(next));
+      return resolveChallenges(maybeFinishScoring(ensureHost(next)));
     }
 
     case 'reconnect': {
@@ -339,12 +371,21 @@ export function reduce(state: GameState, action: Action): GameState {
       requireHost(state, action.playerId);
       requirePhase(state, 'lobby', 'results');
       const settings = validateSettings({ ...state.settings, ...action.settings });
+      if (state.phase === 'results' && state.round && settings.totalRounds < state.round.number) {
+        throw new GameError(
+          'invalid_settings',
+          `You've already played ${state.round.number} rounds`,
+        );
+      }
       return { ...state, settings };
     }
 
     case 'start': {
       requireHost(state, action.playerId);
       requirePhase(state, 'lobby', 'results');
+      if (state.phase === 'results' && (state.round?.number ?? 0) >= state.settings.totalRounds) {
+        throw new GameError('last_round', 'That was the last round – see the final scores');
+      }
       const letter = pickLetter(state.settings, action.random, state.usedLetters);
       const players = state.players.map((p) => ({ ...p, spectating: false }));
       const revealEndsAt = action.now + REVEAL_MS;
@@ -359,7 +400,7 @@ export function reduce(state: GameState, action: Action): GameState {
         answers: {},
         submitted: [],
         result: null,
-        votes: [],
+        challenges: [],
       };
       return {
         ...state,
@@ -443,32 +484,61 @@ export function reduce(state: GameState, action: Action): GameState {
       };
     }
 
-    case 'voteReject': {
+    case 'challenge': {
       requirePlayer(state, action.playerId);
       requirePhase(state, 'results');
       const round = requireRound(state);
       requireParticipant(round, action.playerId);
       const score = round.result?.scores[action.targetId]?.[action.category];
-      if (action.targetId === action.playerId || !score || !(score.valid || score.rejected)) {
-        throw new GameError('invalid_vote', "You can't vote on that answer");
+      if (action.targetId === action.playerId || !score || !score.valid) {
+        throw new GameError('invalid_challenge', "You can't challenge that answer");
       }
-      const isMine = (v: Vote) =>
-        v.voterId === action.playerId &&
-        v.targetId === action.targetId &&
-        v.category === action.category;
-      const already = round.votes.some(isMine);
-      const votes = already
-        ? round.votes.filter((v) => !isMine(v))
-        : [
-            ...round.votes,
-            { voterId: action.playerId, targetId: action.targetId, category: action.category },
-          ];
-      return rescore({ ...state, round: { ...round, votes } });
+      if (findChallenge(round.challenges, action.targetId, action.category)) {
+        throw new GameError('invalid_challenge', 'That answer has already been challenged');
+      }
+      const challenge: Challenge = {
+        targetId: action.targetId,
+        category: action.category,
+        challengerId: action.playerId,
+        votes: { [action.playerId]: 'invalid' },
+        outcome: 'pending',
+      };
+      return resolveChallenges({
+        ...state,
+        round: { ...round, challenges: [...round.challenges, challenge] },
+      });
+    }
+
+    case 'voteChallenge': {
+      requirePlayer(state, action.playerId);
+      requirePhase(state, 'results');
+      const round = requireRound(state);
+      requireParticipant(round, action.playerId);
+      const challenge = findChallenge(round.challenges, action.targetId, action.category);
+      if (!challenge || challenge.outcome !== 'pending') {
+        throw new GameError('invalid_challenge', 'That challenge is already settled');
+      }
+      if (action.targetId === action.playerId) {
+        throw new GameError('invalid_challenge', "You can't vote on your own answer");
+      }
+      if (action.verdict !== 'valid' && action.verdict !== 'invalid') {
+        throw new GameError('invalid_challenge', 'Vote valid or invalid');
+      }
+      const challenges = round.challenges.map((c) =>
+        c === challenge ? { ...c, votes: { ...c.votes, [action.playerId]: action.verdict } } : c,
+      );
+      return resolveChallenges({ ...state, round: { ...round, challenges } });
     }
 
     case 'endGame': {
       requireHost(state, action.playerId);
       requirePhase(state, 'results');
+      return { ...state, phase: 'final', round: state.round && closeChallenges(state.round) };
+    }
+
+    case 'newGame': {
+      requireHost(state, action.playerId);
+      requirePhase(state, 'final');
       const totals: Record<PlayerId, number> = {};
       for (const p of state.players) totals[p.id] = 0;
       return {
@@ -476,6 +546,7 @@ export function reduce(state: GameState, action: Action): GameState {
         phase: 'lobby',
         round: null,
         totals,
+        history: [],
         usedLetters: [],
         players: state.players.map((p) => ({ ...p, spectating: false })),
       };

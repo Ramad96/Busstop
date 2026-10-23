@@ -7,3 +7,5 @@ export * from './clock';
 export * from './state';
 export * from './view';
 export * from './protocol';
+export * from './categories';
+export * from './challenges';

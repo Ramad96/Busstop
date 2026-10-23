@@ -194,11 +194,12 @@ export function attachSocketHandlers(io: GameServer, rooms: RoomManager, now: ()
         if (!isObject(data) || !isObject(data.settings)) {
           throw new RoomError('bad_request', 'Bad request');
         }
-        const { roundSeconds, categories, includeHardLetters } = data.settings;
+        const { roundSeconds, categories, includeHardLetters, totalRounds } = data.settings;
         const settings: Record<string, unknown> = {};
         if (roundSeconds !== undefined) settings.roundSeconds = roundSeconds;
         if (categories !== undefined) settings.categories = categories;
         if (includeHardLetters !== undefined) settings.includeHardLetters = includeHardLetters;
+        if (totalRounds !== undefined) settings.totalRounds = totalRounds;
         dispatch({ type: 'updateSettings', settings });
       }),
     );
@@ -210,6 +211,10 @@ export function attachSocketHandlers(io: GameServer, rooms: RoomManager, now: ()
     socket.on(
       'game:end',
       handle(() => dispatch({ type: 'endGame' })),
+    );
+    socket.on(
+      'game:new',
+      handle(() => dispatch({ type: 'newGame' })),
     );
 
     const answersFrom = (data: unknown) => {
@@ -233,13 +238,26 @@ export function attachSocketHandlers(io: GameServer, rooms: RoomManager, now: ()
     );
 
     socket.on(
-      'answer:vote',
+      'answer:challenge',
       handle((data: unknown) => {
         if (!isObject(data)) throw new RoomError('bad_request', 'Bad request');
+        dispatch({ type: 'challenge', targetId: str(data.targetId), category: str(data.category) });
+      }),
+    );
+
+    socket.on(
+      'challenge:vote',
+      handle((data: unknown) => {
+        if (!isObject(data)) throw new RoomError('bad_request', 'Bad request');
+        const verdict = str(data.verdict);
+        if (verdict !== 'valid' && verdict !== 'invalid') {
+          throw new RoomError('bad_request', 'Vote valid or invalid');
+        }
         dispatch({
-          type: 'voteReject',
+          type: 'voteChallenge',
           targetId: str(data.targetId),
           category: str(data.category),
+          verdict,
         });
       }),
     );

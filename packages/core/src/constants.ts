@@ -16,11 +16,33 @@ export const DEFAULT_CATEGORIES = [
   'Brand',
 ];
 
+/** More categories the host can switch on. */
+export const EXTRA_CATEGORIES = [
+  'Animal',
+  'Colour',
+  'Fruit or veg',
+  'Job',
+  'Film or TV show',
+  'Celebrity',
+  'Football team',
+  'Car brand',
+  'Drink',
+  'Sport',
+  'Thing in a house',
+  'Song',
+];
+
+export const CATEGORY_BANK = [...DEFAULT_CATEGORIES, ...EXTRA_CATEGORIES];
+
 export const DEFAULT_SETTINGS: Settings = {
   roundSeconds: 120,
   categories: [...DEFAULT_CATEGORIES],
   includeHardLetters: false,
+  totalRounds: 3,
 };
+
+export const MIN_ROUNDS = 1;
+export const MAX_ROUNDS = 20;
 
 export const MIN_ROUND_SECONDS = 30;
 export const MAX_ROUND_SECONDS = 300;

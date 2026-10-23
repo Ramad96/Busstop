@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { normaliseRoomCode } from '@letter-race/core';
 import { setMuted, useMuted } from './fx/sound';
 import { useGame } from './net/socket';
+import { Final } from './screens/Final';
 import { Home } from './screens/Home';
 import { JoinCode } from './screens/JoinCode';
 import { Lobby } from './screens/Lobby';
@@ -39,6 +40,9 @@ export function App() {
         break;
       case 'results':
         content = <Results state={state} you={you} />;
+        break;
+      case 'final':
+        content = <Final state={state} you={you} />;
     }
   } else if (rejoining) {
     content = (

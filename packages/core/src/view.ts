@@ -5,7 +5,7 @@ import type { GameState, PlayerId } from './types';
  * so nobody can copy. The shape matches GameState so clients can share types.
  */
 export function toPlayerView(state: GameState, playerId: PlayerId | null): GameState {
-  if (!state.round || state.phase === 'results') return state;
+  if (!state.round || state.phase === 'results' || state.phase === 'final') return state;
   const own = playerId ? state.round.answers[playerId] : undefined;
   return {
     ...state,

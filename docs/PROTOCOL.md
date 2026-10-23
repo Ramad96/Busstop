@@ -1,4 +1,4 @@
-# Letter Race – Client/Server Protocol
+# Busstop – Client/Server Protocol
 
 Transport: [Socket.IO](https://socket.io) v4 (official clients exist for JS and Swift).
 TypeScript types for every message live in `packages/core/src/protocol.ts`.
@@ -32,36 +32,46 @@ always one of:
 
 `message` is human-readable and safe to show to players.
 
-| Event             | Payload                                 | Ack data (on success) | Who / when                                         |
-| ----------------- | --------------------------------------- | --------------------- | -------------------------------------------------- |
-| `time:ping`       | _(none)_                                | `serverNow: number`   | Anyone, any time. Used for clock sync (see below). |
-| `room:check`      | `{ code }`                              | `{ phase }`           | Anyone. Checks a code exists before joining.       |
-| `room:create`     | `{ name, character }`                   | `{ code, playerId }`  | Anyone. Creator becomes host.                      |
-| `room:join`       | `{ code, name, character }`             | `{ code, playerId }`  | Anyone. Mid-round joiners watch until next round.  |
-| `room:rejoin`     | `{ code }`                              | `{ code, playerId }`  | A player already in the room (after reconnect).    |
-| `room:leave`      | _(none)_                                | `{}`                  | Player in a room. Removes them for good.           |
-| `settings:update` | `{ settings: Partial<Settings> }`       | `{}`                  | Host, in `lobby` or `results`.                     |
-| `game:start`      | _(none)_                                | `{}`                  | Host, in `lobby` or `results` (= next round).      |
-| `game:end`        | _(none)_                                | `{}`                  | Host, in `results`. Back to lobby, scores reset.   |
-| `answers:update`  | `{ answers: Record<category, string> }` | `{}`                  | Participant, in `playing`. Saves a draft.          |
-| `answers:submit`  | `{ answers }`                           | `{}`                  | Participant, in `playing` or `scoring`. Final.     |
-| `clock:stop`      | `{ answers }`                           | `{}`                  | Participant, in `playing`, all answers valid.      |
-| `answer:vote`     | `{ targetId, category }`                | `{}`                  | Participant, in `results`. Toggles your vote.      |
+| Event              | Payload                                 | Ack data (on success) | Who / when                                             |
+| ------------------ | --------------------------------------- | --------------------- | ------------------------------------------------------ |
+| `time:ping`        | _(none)_                                | `serverNow: number`   | Anyone, any time. Used for clock sync (see below).     |
+| `room:check`       | `{ code }`                              | `{ phase }`           | Anyone. Checks a code exists before joining.           |
+| `room:create`      | `{ name, character }`                   | `{ code, playerId }`  | Anyone. Creator becomes host.                          |
+| `room:join`        | `{ code, name, character }`             | `{ code, playerId }`  | Anyone. Mid-round joiners watch until next round.      |
+| `room:rejoin`      | `{ code }`                              | `{ code, playerId }`  | A player already in the room (after reconnect).        |
+| `room:leave`       | _(none)_                                | `{}`                  | Player in a room. Removes them for good.               |
+| `settings:update`  | `{ settings: Partial<Settings> }`       | `{}`                  | Host, in `lobby` or `results`.                         |
+| `game:start`       | _(none)_                                | `{}`                  | Host, in `lobby` or `results` (= next round).          |
+| `game:end`         | _(none)_                                | `{}`                  | Host, in `results`. Shows the final scoreboard.        |
+| `game:new`         | _(none)_                                | `{}`                  | Host, in `final`. Back to lobby, scores reset.         |
+| `answers:update`   | `{ answers: Record<category, string> }` | `{}`                  | Participant, in `playing`. Saves a draft.              |
+| `answers:submit`   | `{ answers }`                           | `{}`                  | Participant, in `playing` or `scoring`. Final.         |
+| `clock:stop`       | `{ answers }`                           | `{}`                  | Participant, in `playing`, all answers valid. BUSSTOP! |
+| `answer:challenge` | `{ targetId, category }`                | `{}`                  | Participant, in `results`. Opens a challenge.          |
+| `challenge:vote`   | `{ targetId, category, verdict }`       | `{}`                  | Participant (not the target), challenge pending.       |
 
 Notes:
 
 - `code` is case-insensitive; non-letters are ignored.
 - `character` is one of `fox, frog, panda, unicorn, octopus, tiger, penguin, alien`.
 - `name` is 1–16 characters, unique in the room (ignoring case).
-- `Settings` = `{ roundSeconds: 30–300, categories: string[] (1–12, each 1–24 chars), includeHardLetters: boolean }`.
+- `Settings` = `{ roundSeconds: 30–300, categories: string[] (1–12, each 1–24 chars), includeHardLetters: boolean, totalRounds: 1–20 }`.
+  In `results`, `totalRounds` can't be set below the current round number.
 - Answers for unknown categories are dropped; answers are trimmed and capped at 40 chars.
 - `answers:update` should be sent (throttled) as the player types, so a refresh mid-round
   keeps their answers and the server has them even if the final submit is lost.
-- `clock:stop` sends the player's answers too; the server checks they're all valid.
-- `answer:vote` toggles your vote to reject another player's answer (not your own, not a
-  blank). An answer is rejected – 0 points, and it stops counting as shared – when more
-  than half of the other connected participants vote for it. Scores and `totals` are
-  recalculated on every vote.
+- `clock:stop` is the BUSSTOP! button. It sends the player's answers too; the server checks
+  they're all valid. The caller is saved as `round.stoppedBy` and in `history`.
+- `answer:challenge` challenges another player's valid answer (not your own, not a blank or
+  wrong letter, once per answer). The challenger automatically votes `invalid`.
+- `challenge:vote` – `verdict` is `"valid"` or `"invalid"`; you can change it while the
+  challenge is pending. Voters are the connected participants except the challenged player.
+  More than half `invalid` → `rejected` (0 points, no longer counts as shared, scores and
+  `totals` recalculated). Once `invalid` can't reach a majority → `stands` (ties go to the
+  answer). The challenger never loses points. Challenges still pending when the round moves
+  on close as `stands`.
+- `game:start` in `results` fails with `last_round` once `round.number` reaches
+  `settings.totalRounds`; the host then sends `game:end` to show the final scoreboard.
 
 ## Broadcasts (server → client)
 
@@ -71,12 +81,12 @@ Notes:
 
 `state` is the whole game state (see `GameState` in `packages/core/src/types.ts`), filtered
 for the receiving player: until the `results` phase, `round.answers` contains only that
-player's own answers.
+player's own answers. In `results` and `final` everyone's answers are visible.
 
 ```ts
 GameState {
   code: string;
-  phase: 'lobby' | 'reveal' | 'playing' | 'scoring' | 'results';
+  phase: 'lobby' | 'reveal' | 'playing' | 'scoring' | 'results' | 'final';
   hostId: string | null;
   players: { id, name, character, connected, spectating }[];
   settings: Settings;
@@ -84,14 +94,15 @@ GameState {
     number, letter, categories, participants,
     revealEndsAt,   // epoch ms (server clock): letter animation ends, typing starts
     endsAt,         // epoch ms (server clock): answers lock
-    stoppedBy,      // playerId who pressed Stop the clock, or null
+    stoppedBy,      // playerId who called BUSSTOP!, or null
     answers,        // Record<playerId, Record<category, string>>
     submitted,      // playerIds whose final answers arrived
     result: null | { letter, categories, scores, roundTotals },
-    votes,          // { voterId, targetId, category }[] – reject votes on the results screen
+    challenges,     // { targetId, category, challengerId, votes: Record<playerId, 'valid'|'invalid'>, outcome: 'pending'|'stands'|'rejected' }[]
   };
   totals: Record<playerId, number>;
   usedLetters: string[];
+  history: { number, letter, stoppedBy, roundTotals }[];   // finished rounds this game
 }
 ```
 
@@ -100,11 +111,12 @@ GameState {
 ```
 lobby ──start──▶ reveal ──(revealEndsAt)──▶ playing ──(endsAt)──▶ scoring ──▶ results
   ▲                                                                            │
-  └──────────────────────────── game:end ◀─────────────────────────────────────┤
-                         reveal ◀── game:start (next round, totals kept) ◀──────┘
+  │                      reveal ◀── game:start (next round, totals kept) ◀─────┤
+  │                                                                            │
+  └──── game:new ◀── final ◀── game:end (after the last round, or early) ◀─────┘
 ```
 
-- `reveal` lasts 3 s (letter-from-a-hat animation).
+- `reveal` lasts 3 s (letter reveal animation).
 - `playing` lasts `settings.roundSeconds`. `clock:stop` can bring `endsAt` forward to
   10 s from now (never later).
 - `scoring`: answers are locked. Clients send `answers:submit` straight away. The server
@@ -140,10 +152,11 @@ Take a few samples and keep the one with the smallest round trip. Remaining time
 | `character_invalid`  | Unknown character                        |
 | `room_full`          | Room has 12 players                      |
 | `invalid_settings`   | Settings out of range                    |
-| `answers_incomplete` | Stop the clock needs every answer valid  |
+| `answers_incomplete` | BUSSTOP! needs every answer valid        |
 | `already_submitted`  | Final answers were already sent          |
 | `not_participant`    | You're watching this round (joined late) |
-| `invalid_vote`       | Can't vote on that answer                |
+| `invalid_challenge`  | Can't challenge or vote on that answer   |
+| `last_round`         | That was the last round                  |
 
 ## Reconnecting
 
@@ -161,7 +174,7 @@ If the host disconnects, the next connected player (in join order) becomes host.
   back in `state.round.answers[you]` after `room:rejoin`.
 - **Join mid-round:** the player is added with `spectating: true`, isn't in
   `round.participants`, and gets `not_participant` for answer events. They play from the
-  next `game:start`. Joining during `results` makes you a normal player straight away.
+  next `game:start`. Joining during `results` or `final` makes you a normal player straight away.
 - **Several tabs, one player:** the player only shows as disconnected when their last tab
   closes.
 - **Cleanup:** a room with nobody connected is deleted after 30 minutes; a room whose last

@@ -7,6 +7,7 @@ import { io, type Socket } from 'socket.io-client';
 import type {
   Ack,
   Answers,
+  ChallengeVerdict,
   CharacterId,
   ClientToServerEvents,
   GameState,
@@ -211,8 +212,16 @@ class GameClient {
     return this.request('clock:stop', { answers });
   }
 
-  voteReject(targetId: PlayerId, category: string) {
-    return this.request('answer:vote', { targetId, category });
+  newGame() {
+    return this.request('game:new');
+  }
+
+  challenge(targetId: PlayerId, category: string) {
+    return this.request('answer:challenge', { targetId, category });
+  }
+
+  voteChallenge(targetId: PlayerId, category: string, verdict: ChallengeVerdict) {
+    return this.request('challenge:vote', { targetId, category, verdict });
   }
 }
 

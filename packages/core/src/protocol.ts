@@ -3,7 +3,14 @@
  * Documented in docs/PROTOCOL.md; keep the two in sync.
  */
 import type { GameErrorCode } from './state';
-import type { Answers, CharacterId, GameState, PlayerId, Settings } from './types';
+import type {
+  Answers,
+  ChallengeVerdict,
+  CharacterId,
+  GameState,
+  PlayerId,
+  Settings,
+} from './types';
 
 export type ErrorCode = GameErrorCode | 'room_not_found' | 'bad_request' | 'not_in_room';
 
@@ -44,7 +51,12 @@ export interface ClientToServerEvents {
   'answers:update': (data: { answers: Answers }, ack?: AckFn) => void;
   'answers:submit': (data: { answers: Answers }, ack?: AckFn) => void;
   'clock:stop': (data: { answers: Answers }, ack?: AckFn) => void;
-  'answer:vote': (data: { targetId: PlayerId; category: string }, ack?: AckFn) => void;
+  'game:new': (ack?: AckFn) => void;
+  'answer:challenge': (data: { targetId: PlayerId; category: string }, ack?: AckFn) => void;
+  'challenge:vote': (
+    data: { targetId: PlayerId; category: string; verdict: ChallengeVerdict },
+    ack?: AckFn,
+  ) => void;
 }
 
 export interface ServerToClientEvents {
