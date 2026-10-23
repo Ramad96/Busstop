@@ -1,4 +1,4 @@
-# Deploying Letter Race
+# Deploying Busstop
 
 Two parts:
 
@@ -37,16 +37,20 @@ Notes:
 The workflow builds with `VITE_BASE=/<repo-name>/` so assets load from the Pages sub-path.
 It fails with a clear message until `VITE_SERVER_URL` is set.
 
-## 3. Custom domain (letterrace.amanahdigital.co.uk)
+## 3. Custom domain (busstop.amanahdigital.co.uk)
 
-1. **DNS (Cloudflare):** add a `CNAME` record, name `letterrace`, target `ramad96.github.io`,
+1. **DNS (Cloudflare):** add a `CNAME` record, name `busstop`, target `ramad96.github.io`,
    proxy status **DNS only** (grey cloud) so GitHub can issue the HTTPS certificate.
 2. **Render:** set `CORS_ORIGIN` to
-   `https://letterrace.amanahdigital.co.uk,https://ramad96.github.io` and redeploy.
-3. **GitHub:** Settings → Pages → Custom domain → `letterrace.amanahdigital.co.uk` → Save.
+   `https://busstop.amanahdigital.co.uk,https://ramad96.github.io` and redeploy.
+3. **GitHub:** Settings → Pages → Custom domain → `busstop.amanahdigital.co.uk` → Save.
    When the certificate is ready, tick **Enforce HTTPS**.
 4. Re-run **Deploy web to GitHub Pages**. The workflow sees the custom domain and builds
    with base path `/` instead of `/<repo-name>/`. The old github.io address redirects.
+
+GitHub Pages allows one custom domain per repo. To keep an old address working (e.g.
+`letterrace.amanahdigital.co.uk`), proxy its Cloudflare record (orange cloud) and add a
+Cloudflare Redirect Rule to `https://busstop.amanahdigital.co.uk`, keeping the query string.
 
 Optional but recommended: verify `amanahdigital.co.uk` under your GitHub account
 (Settings → Pages → Verified domains) so nobody else can claim subdomains on GitHub Pages.

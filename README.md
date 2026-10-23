@@ -3,7 +3,7 @@
 A real-time party word game: everyone gets the same letter, then races to fill in every
 category. First to finish shouts BUSSTOP! and everyone else has 10 seconds left.
 
-**Play:** https://letterrace.amanahdigital.co.uk
+**Play:** https://busstop.amanahdigital.co.uk
 
 - Rules: [docs/RULES.md](docs/RULES.md)
 - Client/server messages: [docs/PROTOCOL.md](docs/PROTOCOL.md)
